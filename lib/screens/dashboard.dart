@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'calculator_screen.dart';
 
 // Placeholder for other screens
 class HomeDashboard extends StatefulWidget {
@@ -11,7 +12,6 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-
   // Theme colors
   static const Color primaryColor = Color(0xFF2E3085);
   static const Color secondaryColor = Color(0xFF4E4AA8);
@@ -40,28 +40,45 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     fontSize: 16,
                     letterSpacing: 0.1,
                     color: primaryColor,
-                    fontFamily: GoogleFonts.openSansTextTheme(Theme.of(context).textTheme).bodyMedium?.fontFamily,
+                    fontFamily:
+                        GoogleFonts.openSansTextTheme(
+                          Theme.of(context).textTheme,
+                        ).bodyMedium?.fontFamily,
                   ),
                 ),
                 SizedBox(width: 4),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  color: primaryColor,
-                  size: 20,
-                ),
+                Icon(Icons.keyboard_arrow_down, color: primaryColor, size: 20),
               ],
             ),
           ),
           actions: [
-            IconButton(
-              icon: Icon(Icons.card_giftcard, color: primaryColor, size: 22),
-              onPressed: () => Navigator.pushNamed(context, '/invite-earn'),
-              tooltip: 'Invite & Earn',
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CalculatorScreen()),
+              ),
+              child: Container(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.calculate, color: primaryColor, size: 22),
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.contact_support, color: primaryColor, size: 22),
-              onPressed: () => _showContactUsDialog(context),
-              tooltip: 'Contact Us',
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/invite-earn'),
+              child: Container(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.card_giftcard, color: primaryColor, size: 22),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showContactUsDialog(context),
+              child: Container(
+                padding: EdgeInsets.all(8),
+                child: Icon(
+                  Icons.contact_support,
+                  color: primaryColor,
+                  size: 22,
+                ),
+              ),
             ),
           ],
           shape: null,
@@ -92,7 +109,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     icon: Icons.receipt_long,
                     title: 'Invoices',
                     color: Color(0xFFFF6B35), // Vibrant orange background
-                    onTap: () => Navigator.pushNamed(context, '/create-invoice'),
+                    onTap:
+                        () => Navigator.pushNamed(context, '/create-invoice'),
                   ),
                   SizedBox(width: 16), // Consistent spacing
                   _TopRowCard(
@@ -104,7 +122,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ],
               ),
               SizedBox(height: 18),
-              
+
               // --- Dashboard Cards Section (2x2 grid) ---
               GridView.count(
                 crossAxisCount: 2,
@@ -167,7 +185,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ],
               ),
               SizedBox(height: 18),
-              
+
               // Transactions Section Header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -203,47 +221,47 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ],
               ),
               SizedBox(height: 10),
-              
-                             // Transactions List
-               Column(
-                 children: [
-                   _InvoiceTransactionItem(
-                     customerName: 'Priya Sharma 💫',
-                     invoiceNumber: 'Invoice #5',
-                     dueDate: '06 Aug • 6 day(s) to due',
-                     amount: '₹ 1,250',
-                     status: 'Unpaid',
-                     isTablet: isTablet,
-                   ),
-                   SizedBox(height: 8),
-                   _InvoiceTransactionItem(
-                     customerName: 'Rajesh Kumar 🏢',
-                     invoiceNumber: 'Invoice #4',
-                     dueDate: '05 Aug • 5 day(s) to due',
-                     amount: '₹ 3,450',
-                     status: 'Paid',
-                     isTablet: isTablet,
-                   ),
-                   SizedBox(height: 8),
-                   _InvoiceTransactionItem(
-                     customerName: 'Anita Patel 🌟',
-                     invoiceNumber: 'Invoice #6',
-                     dueDate: '07 Aug • 7 day(s) to due',
-                     amount: '₹ 890',
-                     status: 'Unpaid',
-                     isTablet: isTablet,
-                   ),
-                   SizedBox(height: 8),
-                   _InvoiceTransactionItem(
-                     customerName: 'Vikram Singh 💼',
-                     invoiceNumber: 'Invoice #7',
-                     dueDate: '08 Aug • 8 day(s) to due',
-                     amount: '₹ 2,100',
-                     status: 'Overdue',
-                     isTablet: isTablet,
-                   ),
-                 ],
-               ),
+
+              // Transactions List
+              Column(
+                children: [
+                  _InvoiceTransactionItem(
+                    customerName: 'Priya Sharma 💫',
+                    invoiceNumber: 'Invoice #5',
+                    dueDate: '06 Aug • 6 day(s) to due',
+                    amount: '₹ 1,250',
+                    status: 'Unpaid',
+                    isTablet: isTablet,
+                  ),
+                  SizedBox(height: 8),
+                  _InvoiceTransactionItem(
+                    customerName: 'Rajesh Kumar 🏢',
+                    invoiceNumber: 'Invoice #4',
+                    dueDate: '05 Aug • 5 day(s) to due',
+                    amount: '₹ 3,450',
+                    status: 'Paid',
+                    isTablet: isTablet,
+                  ),
+                  SizedBox(height: 8),
+                  _InvoiceTransactionItem(
+                    customerName: 'Anita Patel 🌟',
+                    invoiceNumber: 'Invoice #6',
+                    dueDate: '07 Aug • 7 day(s) to due',
+                    amount: '₹ 890',
+                    status: 'Unpaid',
+                    isTablet: isTablet,
+                  ),
+                  SizedBox(height: 8),
+                  _InvoiceTransactionItem(
+                    customerName: 'Vikram Singh 💼',
+                    invoiceNumber: 'Invoice #7',
+                    dueDate: '08 Aug • 8 day(s) to due',
+                    amount: '₹ 2,100',
+                    status: 'Overdue',
+                    isTablet: isTablet,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -359,10 +377,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
       },
     );
   }
+
+
 }
 
 // Update _CompactDashboardCard to support arrow indicators
- class _TopRowCard extends StatefulWidget {
+class _TopRowCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final Color color;
@@ -379,7 +399,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
   State<_TopRowCard> createState() => _TopRowCardState();
 }
 
-class _TopRowCardState extends State<_TopRowCard> with SingleTickerProviderStateMixin {
+class _TopRowCardState extends State<_TopRowCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
@@ -391,13 +412,9 @@ class _TopRowCardState extends State<_TopRowCard> with SingleTickerProviderState
       duration: Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -442,7 +459,9 @@ class _TopRowCardState extends State<_TopRowCard> with SingleTickerProviderState
             child: AnimatedContainer(
               duration: Duration(milliseconds: 200),
               curve: Curves.easeInOut,
-              width: MediaQuery.of(context).size.width * 0.44, // Slightly wider for better proportions
+              width:
+                  MediaQuery.of(context).size.width *
+                  0.44, // Slightly wider for better proportions
               height: 110, // Slightly shorter for better proportions
               decoration: BoxDecoration(
                 color: Colors.white, // Clean white background
@@ -479,28 +498,23 @@ class _TopRowCardState extends State<_TopRowCard> with SingleTickerProviderState
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          widget.color,
-                          widget.color.withOpacity(0.8),
-                        ],
+                        colors: [widget.color, widget.color.withOpacity(0.8)],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: widget.color.withOpacity(_isPressed ? 0.35 : 0.25),
+                          color: widget.color.withOpacity(
+                            _isPressed ? 0.35 : 0.25,
+                          ),
                           blurRadius: _isPressed ? 10 : 8,
                           offset: Offset(0, _isPressed ? 3 : 2),
                           spreadRadius: 0,
                         ),
                       ],
                     ),
-                    child: Icon(
-                      widget.icon,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    child: Icon(widget.icon, color: Colors.white, size: 20),
                   ),
-                  
+
                   // Title and arrow in same row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -545,33 +559,33 @@ class _TopRowCardState extends State<_TopRowCard> with SingleTickerProviderState
 }
 
 class _CompactDashboardCard extends StatelessWidget {
-   final IconData? icon;
-   final String title;
-   final String value;
-   final Color color;
-   final String? subtitle;
-   final bool small;
-   final bool rightArrow;
-   final Color? valueColor;
-   final bool showArrow;
-   final String arrowDirection;
-   final Color primaryColor;
-   final bool showIcon;
+  final IconData? icon;
+  final String title;
+  final String value;
+  final Color color;
+  final String? subtitle;
+  final bool small;
+  final bool rightArrow;
+  final Color? valueColor;
+  final bool showArrow;
+  final String arrowDirection;
+  final Color primaryColor;
+  final bool showIcon;
 
-     const _CompactDashboardCard({
-     this.icon,
-     required this.title,
-     required this.value,
-     required this.color,
-     this.subtitle,
-     this.small = false,
-     this.rightArrow = false,
-     this.valueColor,
-     this.showArrow = false,
-     this.arrowDirection = 'down',
-     required this.primaryColor,
-     this.showIcon = false,
-   });
+  const _CompactDashboardCard({
+    this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+    this.subtitle,
+    this.small = false,
+    this.rightArrow = false,
+    this.valueColor,
+    this.showArrow = false,
+    this.arrowDirection = 'down',
+    required this.primaryColor,
+    this.showIcon = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -580,19 +594,19 @@ class _CompactDashboardCard extends StatelessWidget {
     final double paddingV = small ? 10 : 16;
     final double paddingH = small ? 10 : 16;
 
-         return Container(
-       decoration: BoxDecoration(
-         color: color,
-         borderRadius: BorderRadius.circular(14),
-         boxShadow: [
-           BoxShadow(
-             color: color.withOpacity(0.15),
-             blurRadius: 8,
-             offset: Offset(0, 2),
-           ),
-         ],
-         border: Border.all(color: color.withOpacity(0.2), width: 1.2),
-       ),
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: color.withOpacity(0.2), width: 1.2),
+      ),
       padding: EdgeInsets.symmetric(vertical: paddingV, horizontal: paddingH),
       constraints: BoxConstraints(minHeight: 72),
       child: Row(
@@ -606,11 +620,7 @@ class _CompactDashboardCard extends StatelessWidget {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: primaryColor,
-                size: 20,
-              ),
+              child: Icon(icon, color: primaryColor, size: 20),
             ),
             SizedBox(width: 12),
           ],
@@ -638,25 +648,31 @@ class _CompactDashboardCard extends StatelessWidget {
                         subtitle!,
                         style: TextStyle(
                           fontSize: subtitleSize,
-                          fontWeight: (subtitle == 'To Collect' || subtitle == 'To Pay')
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                                                   color: subtitle == 'To Collect'
-                             ? Colors.green[700]
-                             : subtitle == 'To Pay'
-                                 ? Colors.red[700]
-                                 : valueColor?.withOpacity(0.8) ?? primaryColor.withOpacity(0.8),
+                          fontWeight:
+                              (subtitle == 'To Collect' || subtitle == 'To Pay')
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                          color:
+                              subtitle == 'To Collect'
+                                  ? Colors.green[700]
+                                  : subtitle == 'To Pay'
+                                  ? Colors.red[700]
+                                  : valueColor?.withOpacity(0.8) ??
+                                      primaryColor.withOpacity(0.8),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (showArrow) ...[
                         SizedBox(width: 4),
                         Icon(
-                          arrowDirection == 'down' ? Icons.arrow_downward : Icons.arrow_upward,
+                          arrowDirection == 'down'
+                              ? Icons.arrow_downward
+                              : Icons.arrow_upward,
                           size: 12,
-                          color: subtitle == 'To Collect'
-                              ? Colors.green[700]
-                              : Colors.red[700],
+                          color:
+                              subtitle == 'To Collect'
+                                  ? Colors.green[700]
+                                  : Colors.red[700],
                         ),
                       ],
                     ],
@@ -666,11 +682,7 @@ class _CompactDashboardCard extends StatelessWidget {
             ),
           ),
           if (rightArrow)
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey[500],
-            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[500]),
         ],
       ),
     );
@@ -701,43 +713,40 @@ class _BusinessBottomSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-                     // Header
-           Padding(
-             padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-             child: Row(
-               children: [
-                 Expanded(
-                   child: Text(
-                     'Change Business',
-                     style: TextStyle(
-                       fontSize: 16,
-                       fontWeight: FontWeight.w600,
-                       color: Colors.black87,
-                     ),
-                     textAlign: TextAlign.left,
-                   ),
-                 ),
-                 IconButton(
-                   onPressed: () => Navigator.pop(context),
-                   icon: Icon(Icons.close, color: Colors.grey[600], size: 20),
-                   padding: EdgeInsets.zero,
-                   constraints: BoxConstraints(),
-                 ),
-               ],
-             ),
-           ),
-           // Instructional text
-           Padding(
-             padding: EdgeInsets.symmetric(horizontal: 16),
-             child: Text(
-               'Choose the business you want to see the data',
-               style: TextStyle(
-                 fontSize: 13,
-                 color: Colors.grey[600],
-               ),
-               textAlign: TextAlign.left,
-             ),
-           ),
+          // Header
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Change Business',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: Colors.grey[600], size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          // Instructional text
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Choose the business you want to see the data',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              textAlign: TextAlign.left,
+            ),
+          ),
           SizedBox(height: 12),
           // Business list
           Padding(
@@ -812,11 +821,7 @@ class _BusinessBottomSheet extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 18,
-                  ),
+                  Icon(Icons.add, color: Colors.white, size: 18),
                   SizedBox(width: 6),
                   Text(
                     'Add New Business',
@@ -860,27 +865,17 @@ class _ContactOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.3),
-            width: 1,
-          ),
+          border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
         ),
         child: Row(
           children: [
             Container(
               width: 24,
               height: 24,
-              child: isWhatsApp
-                  ? Icon(
-                      Icons.message,
-                      color: Colors.green[600],
-                      size: 20,
-                    )
-                  : Icon(
-                      icon,
-                      color: Colors.black87,
-                      size: 20,
-                    ),
+              child:
+                  isWhatsApp
+                      ? Icon(Icons.message, color: Colors.green[600], size: 20)
+                      : Icon(icon, color: Colors.black87, size: 20),
             ),
             SizedBox(width: 12),
             Text(
@@ -941,137 +936,135 @@ class _InvoiceTransactionItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-                                // Customer name
-           Text(
-             customerName,
-             style: TextStyle(
-               fontWeight: FontWeight.w600,
-               fontSize: 14,
-               color: Colors.black87,
-             ),
-           ),
-           SizedBox(height: 4),
-           // Invoice details and amount/status row
-           Row(
-             children: [
-               Expanded(
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     Text(
-                       invoiceNumber,
-                       style: TextStyle(
-                         fontSize: 12,
-                         color: Colors.grey[600],
-                       ),
-                     ),
-                     SizedBox(height: 2),
-                     Text(
-                       dueDate,
-                       style: TextStyle(
-                         fontSize: 12,
-                         color: Colors.grey[600],
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-               Column(
-                 crossAxisAlignment: CrossAxisAlignment.end,
-                 children: [
-                   Text(
-                     amount,
-                     style: TextStyle(
-                       fontWeight: FontWeight.w600,
-                       fontSize: 14,
-                       color: Colors.black87,
-                     ),
-                   ),
-                   SizedBox(height: 4),
-                   Container(
-                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                     decoration: BoxDecoration(
-                       color: _getStatusColor(status).withOpacity(0.1),
-                       borderRadius: BorderRadius.circular(4),
-                     ),
-                     child: Text(
-                       status,
-                       style: TextStyle(
-                         fontSize: 10,
-                         fontWeight: FontWeight.w500,
-                         color: _getStatusColor(status),
-                       ),
-                     ),
-                   ),
-                 ],
-               ),
-             ],
-           ),
+          // Customer name
+          Text(
+            customerName,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 4),
+          // Invoice details and amount/status row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invoiceNumber,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      dueDate,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    amount,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: _getStatusColor(status),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           SizedBox(height: 12),
-                     // Action buttons
-           Row(
-             children: [
-               Expanded(
-                 child: GestureDetector(
-                   onTap: () {
-                     // Handle Record Manually action
-                   },
-                   child: Container(
-                     height: 32,
-                     decoration: BoxDecoration(
-                       color: Colors.grey[100],
-                       borderRadius: BorderRadius.circular(6),
-                     ),
-                     child: Row(
-                       mainAxisAlignment: MainAxisAlignment.center,
-                       children: [
-                         Icon(Icons.currency_rupee, size: 14, color: Colors.grey[700]),
-                         SizedBox(width: 4),
-                         Text(
-                           'Record Manually',
-                           style: TextStyle(
-                             fontSize: 11,
-                             color: Colors.grey[700],
-                             fontWeight: FontWeight.w500,
-                           ),
-                         ),
-                       ],
-                     ),
-                   ),
-                 ),
-               ),
-               SizedBox(width: 8),
-               Expanded(
-                 child: GestureDetector(
-                   onTap: () {
-                     // Handle Share Payment Link action
-                   },
-                   child: Container(
-                     height: 32,
-                     decoration: BoxDecoration(
-                       color: Colors.green[50],
-                       borderRadius: BorderRadius.circular(6),
-                     ),
-                     child: Row(
-                       mainAxisAlignment: MainAxisAlignment.center,
-                       children: [
-                         Icon(Icons.message, size: 14, color: Colors.green[600]),
-                         SizedBox(width: 4),
-                         Text(
-                           'Share Payment Link',
-                           style: TextStyle(
-                             fontSize: 11,
-                             color: Colors.green[600],
-                             fontWeight: FontWeight.w500,
-                           ),
-                         ),
-                       ],
-                     ),
-                   ),
-                 ),
-               ),
-             ],
-           ),
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    // Handle Record Manually action
+                  },
+                  child: Container(
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.currency_rupee,
+                          size: 14,
+                          color: Colors.grey[700],
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Record Manually',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    // Handle Share Payment Link action
+                  },
+                  child: Container(
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.message, size: 14, color: Colors.green[600]),
+                        SizedBox(width: 4),
+                        Text(
+                          'Share Payment Link',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.green[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
