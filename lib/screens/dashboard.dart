@@ -101,6 +101,88 @@ class _HomeDashboardState extends State<HomeDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // --- Trial Expiration Banner ---
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/subscription');
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      // Star icon
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.amber[100],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.star,
+                          color: Colors.amber[700],
+                          size: 16,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      // Main content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Your Free Trial is expired',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[100],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '0 Days Left',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.red[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Your Trial has expired, You cannot create any documents. Please subscribe for unlimited use.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[700],
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+
               // --- Top Row Cards Section (Invoices, Purchase) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

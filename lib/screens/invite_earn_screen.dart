@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'payout_history_screen.dart';
 
 class InviteEarnScreen extends StatefulWidget {
   const InviteEarnScreen({super.key});
@@ -570,128 +571,82 @@ class _InviteEarnScreenState extends State<InviteEarnScreen>
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Money bags illustration
-                Stack(
-                  children: [
-                    // Back money bag
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: secondaryColor.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: secondaryColor.withOpacity(0.3),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.card_giftcard_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                    // Front money bag
-                    Positioned(
-                      left: 12,
-                      top: 8,
-                      child: Container(
-                        width: 42,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: primaryColor,
-                          borderRadius: BorderRadius.circular(21),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryColor.withOpacity(0.4),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text(
-                            '\$',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // Front money bag
+                Image.asset('assets/images/coins.png', width: 90, height: 90,),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          // Total Rewards Section
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  primaryColor.withOpacity(0.05),
-                  secondaryColor.withOpacity(0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: primaryColor.withOpacity(0.15),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '₹ 0.0',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Total Reward Earned',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: primaryColor,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
+                     // Total Rewards Section
+           GestureDetector(
+             onTap: () {
+               Navigator.push(
+                 context,
+                 MaterialPageRoute(
+                   builder: (context) => const PayoutHistoryScreen(),
+                 ),
+               );
+             },
+             child: Container(
+               width: double.infinity,
+               padding: const EdgeInsets.all(16),
+               decoration: BoxDecoration(
+                 gradient: LinearGradient(
+                   begin: Alignment.topLeft,
+                   end: Alignment.bottomRight,
+                   colors: [
+                     primaryColor.withOpacity(0.05),
+                     secondaryColor.withOpacity(0.05),
+                   ],
+                 ),
+                 borderRadius: BorderRadius.circular(12),
+                 border: Border.all(
+                   color: primaryColor.withOpacity(0.15),
+                   width: 1,
+                 ),
+               ),
+               child: Row(
+                 children: [
+                   Expanded(
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text(
+                           '₹ 0.0',
+                           style: TextStyle(
+                             color: primaryColor,
+                             fontSize: 20,
+                             fontWeight: FontWeight.w700,
+                           ),
+                         ),
+                         const SizedBox(height: 2),
+                         Text(
+                           'Total Reward Earned',
+                           style: TextStyle(
+                             color: primaryColor,
+                             fontSize: 13,
+                             fontWeight: FontWeight.w500,
+                           ),
+                         ),
+                       ],
+                     ),
+                   ),
+                   Container(
+                     padding: const EdgeInsets.all(6),
+                     decoration: BoxDecoration(
+                       color: primaryColor.withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(6),
+                     ),
+                     child: Icon(
+                       Icons.arrow_forward_ios_rounded,
+                       color: primaryColor,
+                       size: 18,
+                     ),
+                   ),
+                 ],
+               ),
+             ),
+           ),
         ],
       ),
     );
