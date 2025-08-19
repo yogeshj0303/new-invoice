@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'invoice_created_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   const CreateInvoiceScreen({super.key});
@@ -15,6 +16,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final TextEditingController discountController = TextEditingController();
   final TextEditingController taxController = TextEditingController();
   final TextEditingController tableController = TextEditingController();
+  final TextEditingController customerNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
   final TextEditingController amountReceivedController = TextEditingController();
@@ -459,6 +461,68 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
              ),
              SizedBox(height: 12),
 
+                         // Customer Information Section
+             Container(
+               decoration: BoxDecoration(
+                 color: cardColor,
+                 borderRadius: BorderRadius.circular(8),
+                 boxShadow: [
+                   BoxShadow(
+                     color: Colors.black.withOpacity(0.04),
+                     blurRadius: 6,
+                     offset: Offset(0, 1),
+                   ),
+                 ],
+               ),
+               child: Padding(
+                 padding: const EdgeInsets.all(12.0),
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       'Customer Information',
+                       style: theme.textTheme.titleMedium?.copyWith(
+                         fontWeight: FontWeight.w600,
+                         color: Colors.black87,
+                         fontSize: 14,
+                       ),
+                     ),
+                     SizedBox(height: 12),
+                     Row(
+                       children: [
+                         Expanded(
+                           child: TextField(
+                             controller: customerNameController,
+                             decoration: InputDecoration(
+                               labelText: 'Customer Name',
+                               border: OutlineInputBorder(
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                             ),
+                           ),
+                         ),
+                         SizedBox(width: 12),
+                         Expanded(
+                           child: TextField(
+                             controller: phoneController,
+                             decoration: InputDecoration(
+                               labelText: 'Phone Number',
+                               border: OutlineInputBorder(
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                             ),
+                           ),
+                         ),
+                       ],
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+             SizedBox(height: 12),
+
                          // Payment and Notes Section
              Container(
                decoration: BoxDecoration(
@@ -477,9 +541,64 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
-                     _buildAddOption('Amount Received', Icons.payment_outlined),
-                     SizedBox(height: 6),
-                     _buildAddOption('Notes', Icons.note_outlined),
+                     // Payment Type Selection
+                     Container(
+                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                       decoration: BoxDecoration(
+                         border: Border.all(color: Colors.grey[300]!),
+                         borderRadius: BorderRadius.circular(8),
+                       ),
+                       child: DropdownButtonFormField<String>(
+                         value: paymentType,
+                         decoration: InputDecoration(
+                           labelText: 'Payment Type',
+                           border: InputBorder.none,
+                           contentPadding: EdgeInsets.zero,
+                         ),
+                         items: ['Cash', 'Card', 'UPI', 'Bank Transfer'].map((String value) {
+                           return DropdownMenuItem<String>(
+                             value: value,
+                             child: Text(value),
+                           );
+                         }).toList(),
+                         onChanged: (String? newValue) {
+                           setState(() {
+                             paymentType = newValue!;
+                           });
+                         },
+                       ),
+                     ),
+                     SizedBox(height: 12),
+                     Row(
+                       children: [
+                         Expanded(
+                           child: TextField(
+                             controller: amountReceivedController,
+                             keyboardType: TextInputType.number,
+                             decoration: InputDecoration(
+                               labelText: 'Amount Received',
+                               border: OutlineInputBorder(
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                             ),
+                           ),
+                         ),
+                         SizedBox(width: 12),
+                         Expanded(
+                           child: TextField(
+                             controller: notesController,
+                             decoration: InputDecoration(
+                               labelText: 'Notes',
+                               border: OutlineInputBorder(
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                             ),
+                           ),
+                         ),
+                       ],
+                     ),
                    ],
                  ),
                ),
@@ -491,9 +610,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                width: double.infinity,
                height: 48,
                decoration: BoxDecoration(
-                 color: primaryColor,
+                 color: items.isEmpty ? Colors.grey[400] : primaryColor,
                  borderRadius: BorderRadius.circular(8),
-                 boxShadow: [
+                 boxShadow: items.isEmpty ? [] : [
                    BoxShadow(
                      color: primaryColor.withOpacity(0.3),
                      blurRadius: 6,
@@ -505,19 +624,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                  color: Colors.transparent,
                  child: InkWell(
                    borderRadius: BorderRadius.circular(8),
-                   onTap: () {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                       SnackBar(
-                         content: Text('Bill generated successfully'),
-                         backgroundColor: Colors.green[600],
-                         behavior: SnackBarBehavior.floating,
-                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                   onTap: items.isEmpty ? null : () {
+                     // Navigate to invoice created screen
+                     Navigator.push(
+                       context,
+                       MaterialPageRoute(
+                         builder: (context) => InvoiceCreatedScreen(
+                           items: items,
+                           subtotal: subtotal,
+                           discount: discount,
+                           tax: tax,
+                           total: total,
+                           invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
+                           date: DateTime.now(),
+                           customerName: customerNameController.text,
+                           customerPhone: phoneController.text,
+                           notes: notesController.text,
+                           paymentType: paymentType,
+                           amountReceived: double.tryParse(amountReceivedController.text) ?? 0,
+                         ),
                        ),
                      );
                    },
                    child: Center(
                      child: Text(
-                       'Generate Bill',
+                       items.isEmpty ? 'Add Items to Generate Bill' : 'Generate Bill',
                        style: theme.textTheme.titleMedium?.copyWith(
                          fontWeight: FontWeight.w600,
                          color: Colors.white,
