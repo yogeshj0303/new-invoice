@@ -19,11 +19,14 @@ class _ItemsScreenState extends State<ItemsScreen> {
   String _selectedCategory = 'All Items';
   String _selectedStockFilter = 'All';
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _loadItems();
+    _searchController.addListener(_onSearchChanged);
   }
 
   void _loadItems() {
@@ -76,6 +79,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
     ];
   }
 
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredItems = _getFilteredItems();
@@ -94,46 +103,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
           ),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const CreateItemScreen()),
-            );
-          },
-          backgroundColor: primaryColor,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
-          icon: const Icon(
-            Icons.add_circle_outline,
-            size: 20,
-            color: Colors.white,
-          ),
-          label: const Text(
-            'Create New Item',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -150,22 +119,134 @@ class _ItemsScreenState extends State<ItemsScreen> {
         child: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
-          title: Text(
-            'Items',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              letterSpacing: 0.1,
-              color: Colors.black87,
-            ),
-          ),
+          title: _isSearching
+              ? Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: primaryColor.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search items by name or description...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: primaryColor,
+                        size: 20,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
+              : Text(
+                  'Items',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    letterSpacing: 0.1,
+                    color: Colors.black87,
+                  ),
+                ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.search, color: Colors.grey, size: 24),
-              onPressed: () {
-                // Handle search
-              },
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (_isSearching) {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }
+                    _isSearching = !_isSearching;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    _isSearching ? Icons.close : Icons.search,
+                    color: _isSearching ? Colors.red[400] : Colors.grey[600],
+                    size: 18,
+                  ),
+                ),
+              ),
             ),
+            if (!_isSearching)
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [primaryColor, secondaryColor],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CreateItemScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -291,7 +372,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
         left: 8,
         right: 8,
         top: 8,
-        bottom: 80, // Add bottom padding to prevent FAB overlap
+        bottom: 8,
       ),
       itemBuilder: (context, index) {
         final item = items[index];
@@ -586,6 +667,16 @@ class _ItemsScreenState extends State<ItemsScreen> {
   List<Item> _getFilteredItems() {
     List<Item> filteredItems = List.from(_items);
 
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filteredItems = filteredItems.where((item) {
+        final name = item.name.toLowerCase();
+        final description = item.description.toLowerCase();
+        final query = _searchQuery.toLowerCase();
+        return name.contains(query) || description.contains(query);
+      }).toList();
+    }
+
     // Apply category filter
     if (_selectedCategory != 'All Items') {
       filteredItems =
@@ -636,7 +727,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
 
   @override
   void dispose() {
-    // _searchController.dispose(); // This controller is not used in the new code
+    _searchController.dispose();
     super.dispose();
   }
 }

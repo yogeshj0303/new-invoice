@@ -22,29 +22,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
 
   final List<SubscriptionPlan> plans = [
     SubscriptionPlan(
-      name: 'Silver',
-      monthlyPrice: 33,
+      name: 'Basic',
+      monthlyPrice: 99,
       isSelected: true,
       color: const Color(0xFF6B7280),
       gradient: [const Color(0xFF6B7280), const Color(0xFF9CA3AF)],
     ),
     SubscriptionPlan(
-      name: 'Diamond',
-      monthlyPrice: 217,
+      name: 'Advanced',
+      monthlyPrice: 199,
       isSelected: false,
       color: const Color(0xFF3B82F6),
       gradient: [const Color(0xFF3B82F6), const Color(0xFF60A5FA)],
     ),
     SubscriptionPlan(
-      name: 'Platinum',
-      monthlyPrice: 250,
-      isSelected: false,
-      color: const Color(0xFF8B5CF6),
-      gradient: [const Color(0xFF8B5CF6), const Color(0xFFA78BFA)],
-    ),
-    SubscriptionPlan(
       name: 'Enterprise',
-      monthlyPrice: 417,
+      monthlyPrice: 399,
       isSelected: false,
       isEnterprise: true,
       color: const Color(0xFF059669),
@@ -475,64 +468,260 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
           offset: Offset(0, 15 * (1 - animation.value)),
           child: Opacity(
             opacity: animation.value,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+            child: GestureDetector(
+              onTap: () => _showCouponBottomSheet(),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
-                    child: const Icon(
-                      Icons.percent,
-                      color: Color(0xFF3B82F6),
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Apply Coupon Code',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2937),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.percent,
+                        color: Color(0xFF3B82F6),
+                        size: 16,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(6),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Apply Coupon Code',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
                     ),
-                    child: Icon(
-                      Icons.arrow_forward_ios,
-                      color: Colors.grey[600],
-                      size: 14,
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.grey[600],
+                        size: 14,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  void _showCouponBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
+      builder: (context) => _buildCouponBottomSheet(),
+    );
+  }
+
+  Widget _buildCouponBottomSheet() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Title
+            const Text(
+              'Apply Coupon Code',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 6),
+            
+            // Subtitle
+            Text(
+              'Enter your coupon code to get exclusive discounts',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            
+            // Coupon input field
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Enter coupon code',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 15,
+                  ),
+                  border: InputBorder.none,
+                  suffixIcon: Icon(
+                    Icons.confirmation_number,
+                    color: Colors.grey[400],
+                    size: 18,
+                  ),
+                ),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Apply button
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              width: double.infinity,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: plans[selectedPlanIndex].gradient,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: plans[selectedPlanIndex].color.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    // TODO: Implement coupon validation logic
+                    Navigator.pop(context);
+                    _showCouponAppliedSnackBar();
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Center(
+                    child: Text(
+                      'Apply Coupon',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Cancel button
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCouponAppliedSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.check,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Coupon applied successfully!',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -606,15 +795,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
   IconData _getFeatureIcon(int index) {
     switch (index) {
       case 0:
-        return Icons.phone_android;
+        return Icons.star_border;
       case 1:
-        return Icons.business;
+        return Icons.star_half;
       case 2:
-        return Icons.person;
+        return Icons.star;
       case 3:
-        return Icons.handshake;
+        return Icons.support_agent;
       case 4:
-        return Icons.receipt_long;
+        return Icons.workspace_premium;
       default:
         return Icons.check;
     }
@@ -623,15 +812,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
   String _getFeatureTitle(int index) {
     switch (index) {
       case 0:
-        return 'Android';
+        return 'Basic Plan Features';
       case 1:
-        return '1 Business';
+        return 'Advanced Plan Features';
       case 2:
-        return '1 User';
+        return 'Enterprise Plan Features';
       case 3:
-        return 'Customer Relation Management (CRM)';
+        return 'Customer Support';
       case 4:
-        return 'Create Unlimited Invoices';
+        return 'Additional Benefits';
       default:
         return 'Feature';
     }
@@ -640,15 +829,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
   String _getFeatureDescription(int index) {
     switch (index) {
       case 0:
-        return 'Access Act T Connect GST Invoice from 1 mobile device';
+        return 'Up to 100 invoices/month, 1 business, 1 user, basic CRM features';
       case 1:
-        return 'Manage billing for 1 business/account';
+        return 'Up to 1000 invoices/month, 3 businesses, 5 users, advanced CRM';
       case 2:
-        return 'You cannot add extra staff members to manage your business';
+        return 'Unlimited invoices, unlimited businesses, unlimited users, full CRM suite';
       case 3:
-        return 'Service reminders, notes and appointments, birthday reminders';
+        return 'Email support, priority support, dedicated account manager';
       case 4:
-        return '';
+        return 'API access, custom integrations, advanced analytics, white-label options';
       default:
         return '';
     }

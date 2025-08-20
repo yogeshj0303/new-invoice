@@ -658,25 +658,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       setState(() {
                         selectedLanguage = value;
                       });
-                    }),
+                    }, isAvailable: true),
                     const SizedBox(height: 12),
                     _buildLanguageOptionWithRadio('हिन्दी (Hindi)', 'hi', selectedLanguage, (value) {
-                      setState(() {
-                        selectedLanguage = value;
-                      });
-                    }),
+                      _showComingSoonMessage('Hindi language support');
+                    }, isAvailable: false),
                     const SizedBox(height: 12),
                     _buildLanguageOptionWithRadio('Hinglish (Hindi in English characters)', 'hinglish', selectedLanguage, (value) {
-                      setState(() {
-                        selectedLanguage = value;
-                      });
-                    }),
+                      _showComingSoonMessage('Hinglish language support');
+                    }, isAvailable: false),
                     const SizedBox(height: 12),
                     _buildLanguageOptionWithRadio('ગુજરાતી (Gujarati)', 'gu', selectedLanguage, (value) {
-                      setState(() {
-                        selectedLanguage = value;
-                      });
-                    }),
+                      _showComingSoonMessage('Gujarati language support');
+                    }, isAvailable: false),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -712,7 +706,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     );
   }
 
-  Widget _buildLanguageOptionWithRadio(String languageName, String languageCode, String selectedLanguage, Function(String) onChanged) {
+  Widget _buildLanguageOptionWithRadio(String languageName, String languageCode, String selectedLanguage, Function(String) onChanged, {required bool isAvailable}) {
     return InkWell(
       onTap: () => onChanged(languageCode),
       child: Container(
@@ -729,28 +723,84 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           children: [
             Icon(
               Icons.language,
-              color: primaryColor,
+              color: isAvailable ? primaryColor : Colors.grey[400],
               size: 18,
             ),
             const SizedBox(width: 12),
             Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    languageName,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: isAvailable ? Color(0xFF1A1A1A) : Colors.grey[600],
+                    ),
+                  ),
+                  if (!isAvailable) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Coming Soon',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (isAvailable)
+              Radio<String>(
+                value: languageCode,
+                groupValue: selectedLanguage,
+                onChanged: (value) => onChanged(value!),
+                activeColor: primaryColor,
+              )
+            else
+              Icon(
+                Icons.lock_outline,
+                color: Colors.grey[400],
+                size: 18,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoonMessage(String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Text(
-                languageName,
+                '$feature is coming soon!',
                 style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF1A1A1A),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            Radio<String>(
-              value: languageCode,
-              groupValue: selectedLanguage,
-              onChanged: (value) => onChanged(value!),
-              activeColor: primaryColor,
-            ),
           ],
         ),
+        backgroundColor: Colors.orange[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

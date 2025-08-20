@@ -89,34 +89,37 @@ class _MenuScreenState extends State<MenuScreen> {
         ),
         const SizedBox(height: 8),
         // Business & GST Settings Button
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: Colors.grey[300]!,
-              width: 1,
+        InkWell(
+          onTap: () => Navigator.pushNamed(context, '/business-profile'),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: Colors.grey[300]!,
+                width: 1,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                'BUSINESS & GST SETTINGS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
+            child: Row(
+              children: [
+                Text(
+                  'BUSINESS PROFILE',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: primaryColor,
-                size: 14,
-              ),
-            ],
+                const Spacer(),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: primaryColor,
+                  size: 14,
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -288,14 +291,6 @@ class _MenuScreenState extends State<MenuScreen> {
                 'NEW',
                 () {
                   Navigator.pushNamed(context, '/invoice-settings');
-                },
-              ),
-              const Divider(height: 1, color: Color(0xFFE9ECEF)),
-              _buildSettingsListTile(
-                'Business Profile',
-                Icons.business,
-                () {
-                  Navigator.pushNamed(context, '/business-profile');
                 },
               ),
               const Divider(height: 1, color: Color(0xFFE9ECEF)),

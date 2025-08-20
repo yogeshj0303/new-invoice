@@ -28,9 +28,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
   final _basicFormKey = GlobalKey<FormState>();
   final _businessFormKey = GlobalKey<FormState>();
   final _businessNameController = TextEditingController(text: 'Business Name');
-  final _gsinController = TextEditingController(text: 'GSIN123456789');
+  final _gstinController = TextEditingController(text: 'GSTIN123456789');
   final _phone1Controller = TextEditingController(text: '+91 98765 43210');
-  final _phone2Controller = TextEditingController(text: '+91 87654 32109');
   final _emailController = TextEditingController(text: 'john.doe@example.com');
   final _businessAddressController = TextEditingController(
     text: '123 Business Street, Andheri West',
@@ -80,9 +79,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     _signatureController.dispose();
     _businessSignatureController.dispose();
     _businessNameController.dispose();
-    _gsinController.dispose();
+    _gstinController.dispose();
     _phone1Controller.dispose();
-    _phone2Controller.dispose();
     _emailController.dispose();
     _businessAddressController.dispose();
     _pincodeController.dispose();
@@ -319,13 +317,13 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         ),
         const SizedBox(height: 12),
         _buildTextField(
-          label: 'GSIN',
-          controller: _gsinController,
-          hint: 'Enter GSIN number',
+          label: 'GSTIN',
+          controller: _gstinController,
+          hint: 'Enter GSTIN number',
           textCapitalization: TextCapitalization.characters,
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'GSIN is required';
+              return 'GSTIN is required';
             }
             return null;
           },
@@ -339,7 +337,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTextField(
-          label: 'Phone Number 1',
+          label: 'Phone Number',
           controller: _phone1Controller,
           hint: 'Enter primary phone number',
           keyboardType: TextInputType.phone,
@@ -349,13 +347,6 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             }
             return null;
           },
-        ),
-        const SizedBox(height: 12),
-        _buildTextField(
-          label: 'Phone Number 2 (Optional)',
-          controller: _phone2Controller,
-          hint: 'Enter secondary phone number',
-          keyboardType: TextInputType.phone,
         ),
         const SizedBox(height: 12),
         _buildTextField(

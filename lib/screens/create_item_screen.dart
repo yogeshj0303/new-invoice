@@ -21,12 +21,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   final _purchasePriceController = TextEditingController();
   final _hsnController = TextEditingController();
 
-  String _selectedItemType = 'Product';
   String _selectedGst = 'None';
   bool _withTax = false;
   String _selectedTab = 'Pricing';
   bool _lowStockAlert = false;
-  bool _showInStore = false;
 
   @override
   void dispose() {
@@ -57,8 +55,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
               child: Column(
                 children: [
                   _buildItemNameField(),
-                  const SizedBox(height: 16),
-                  _buildItemTypeSection(),
                   const SizedBox(height: 16),
                   _buildTabBar(),
                   const SizedBox(height: 12),
@@ -105,94 +101,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     );
   }
 
-  Widget _buildItemTypeSection() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Item Type',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTypeCard(
-                  'Product',
-                  Icons.inventory_2_outlined,
-                  _selectedItemType == 'Product',
-                  () => setState(() => _selectedItemType = 'Product'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTypeCard(
-                  'Service',
-                  Icons.miscellaneous_services_outlined,
-                  _selectedItemType == 'Service',
-                  () => setState(() => _selectedItemType = 'Service'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeCard(String title, IconData icon, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.1) : Colors.grey[50],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? primaryColor : Colors.grey[200]!,
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? primaryColor : Colors.grey[600],
-              size: 20,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? primaryColor : const Color(0xFF1A1A1A),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildItemNameField() {
     return _buildCompactFormField(
       'Item Name',
@@ -223,7 +131,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             Expanded(child: _buildTab('Pricing', _selectedTab == 'Pricing')),
             Expanded(child: _buildTab('Stock', _selectedTab == 'Stock')),
             Expanded(child: _buildTab('Other', _selectedTab == 'Other')),
-            Expanded(child: _buildTab('Price', _selectedTab == 'Price')),
           ],
         ),
       ),
@@ -252,14 +159,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   }
 
   Widget _buildTabContent() {
-    if (_selectedTab == 'Price') {
-      return _buildCompactEmptyState(
-        Icons.price_change_outlined,
-        'Party Wise Pricing',
-        'Save the item first to enable custom pricing',
-      );
-    }
-    
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -350,6 +249,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         return Column(
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: _buildCompactFormField(
@@ -362,14 +262,14 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 const SizedBox(width: 8),
                 Container(
                   width: 60,
-                  padding: const EdgeInsets.only(top: 24),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Text(
                       'PCS',
                       style: TextStyle(
                         fontSize: 12,
@@ -411,24 +311,15 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           children: [
             _buildCompactImageUpload(),
             const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: _buildCompactFormField(
-                    'Item Category',
-                    isDropdown: true,
-                    value: 'Select Category',
-                    items: ['Select Category', 'Food', 'Beverages', 'Snacks'],
-                    icon: Icons.category_outlined,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCompactCustomFieldsButton(),
-                ),
-              ],
+            _buildCompactFormField(
+              'Item Category',
+              isDropdown: true,
+              value: 'Select Category',
+              items: ['Select Category', 'Food', 'Beverages', 'Snacks'],
+              icon: Icons.category_outlined,
             ),
+            const SizedBox(height: 12),
+            _buildCompactCustomFieldsButton(),
             const SizedBox(height: 12),
             _buildCompactFormField(
               'Item Description',
@@ -436,13 +327,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
               keyboardType: TextInputType.multiline,
               maxLines: 2,
               icon: Icons.description_outlined,
-            ),
-            const SizedBox(height: 12),
-            _buildCompactSwitchTile(
-              'Show in Online Store',
-              Icons.shopping_bag_outlined,
-              _showInStore,
-              (value) => setState(() => _showInStore = value),
             ),
           ],
         );
@@ -493,7 +377,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         onPressed: () {
           // TODO: Handle add fields
         },
-        icon: const Icon(Icons.add, color: primaryColor, size: 16),
         label: const Text(
           'Custom Fields',
           style: TextStyle(
@@ -512,6 +395,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       ),
     );
   }
+
+
 
   Widget _buildCompactSwitchTile(String title, IconData icon, bool value, ValueChanged<bool> onChanged) {
     return Container(

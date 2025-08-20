@@ -21,6 +21,7 @@ import 'package:invoice_app/screens/complete_profile_screen.dart';
 import 'package:invoice_app/screens/purchase_screen.dart';
 import 'package:invoice_app/screens/upload_bill_screen.dart';
 import 'package:invoice_app/screens/manage_companies_screen.dart';
+import 'package:invoice_app/screens/business_gst_settings_screen.dart';
 
 void main() {
   runApp(RestaurantInvoiceApp());

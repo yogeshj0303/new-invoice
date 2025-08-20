@@ -211,7 +211,7 @@ class _ManageCompaniesScreenState extends State<ManageCompaniesScreen>
 
   Widget _buildMyCompaniesTab(ThemeData theme) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(top: 16, bottom: 16),
       itemCount: myCompanies.length,
       itemBuilder: (context, index) {
         final company = myCompanies[index];
@@ -220,45 +220,10 @@ class _ManageCompaniesScreenState extends State<ManageCompaniesScreen>
     );
   }
 
-  Widget _buildSharedWithMeTab(ThemeData theme) {
-    if (sharedCompanies.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.business_center_outlined,
-              size: 64,
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No shared companies',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontSize: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sharedCompanies.length,
-      itemBuilder: (context, index) {
-        final company = sharedCompanies[index];
-        return _buildCompanyCard(company, theme);
-      },
-    );
-  }
 
   Widget _buildCompanyCard(Map<String, dynamic> company, ThemeData theme) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
@@ -270,105 +235,92 @@ class _ManageCompaniesScreenState extends State<ManageCompaniesScreen>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          company['name'],
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: company['status'] == 'active' 
-                                ? Colors.green 
-                                : theme.colorScheme.onSurface.withOpacity(0.3),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          company['id'],
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 14,
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                                                 Container(
-                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                           decoration: BoxDecoration(
-                             color: (company['syncStatus'] ?? false) 
-                                 ? theme.colorScheme.primary.withOpacity(0.1)
-                                 : theme.colorScheme.onSurface.withOpacity(0.1),
-                             borderRadius: BorderRadius.circular(12),
-                             border: Border.all(
-                               color: (company['syncStatus'] ?? false)
-                                   ? theme.colorScheme.primary.withOpacity(0.3)
-                                   : theme.colorScheme.onSurface.withOpacity(0.3),
-                               width: 1,
-                             ),
-                           ),
-                           child: Row(
-                             mainAxisSize: MainAxisSize.min,
-                             children: [
-                               Icon(
-                                 Icons.sync,
-                                 size: 12,
-                                 color: (company['syncStatus'] ?? false)
-                                     ? theme.colorScheme.primary
-                                     : theme.colorScheme.onSurface.withOpacity(0.5),
-                               ),
-                               const SizedBox(width: 4),
-                               Text(
-                                 (company['syncStatus'] ?? false) ? 'Sync On' : 'Sync Off',
-                                 style: theme.textTheme.labelSmall?.copyWith(
-                                   fontSize: 10,
-                                   fontWeight: FontWeight.w600,
-                                   color: (company['syncStatus'] ?? false)
-                                       ? theme.colorScheme.primary
-                                       : theme.colorScheme.onSurface.withOpacity(0.5),
-                                 ),
-                               ),
-                             ],
-                           ),
-                         ),
-                      ],
-                    ),
-                  ],
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        title: Row(
+          children: [
+            Text(
+              company['name'],
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: company['status'] == 'active' 
+                    ? Colors.green 
+                    : theme.colorScheme.onSurface.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+        subtitle: Row(
+          children: [
+            Text(
+              company['id'],
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: (company['syncStatus'] ?? false) 
+                    ? theme.colorScheme.primary.withOpacity(0.1)
+                    : theme.colorScheme.onSurface.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: (company['syncStatus'] ?? false)
+                      ? theme.colorScheme.primary.withOpacity(0.3)
+                      : theme.colorScheme.onSurface.withOpacity(0.3),
+                  width: 1,
                 ),
               ),
-              IconButton(
-                onPressed: () {
-                  _showCompanyOptions(company, theme);
-                },
-                icon: Icon(
-                  Icons.more_vert,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.sync,
+                    size: 12,
+                    color: (company['syncStatus'] ?? false)
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    (company['syncStatus'] ?? false) ? 'Sync On' : 'Sync Off',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: (company['syncStatus'] ?? false)
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
+        trailing: GestureDetector(
+          onTap: () {
+            _showCompanyOptions(company, theme);
+          },
+          child: Icon(
+              Icons.more_vert,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+        ),
       ),
     );
   }
