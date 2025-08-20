@@ -1893,601 +1893,10 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
     return number.toString();
   }
 
-  // Preview functionality
+  // Preview functionality - Directly generate PDF
   Future<void> _previewInvoice(BuildContext context) async {
-    // Show preview dialog with invoice content
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Invoice Preview',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: selectedColor,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                
-                // Invoice Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Company Header
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: selectedColor.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: selectedColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.business,
-                                  color: Colors.white,
-                                  size: 30,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'ACT T CONNECT',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: selectedColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Professional Business Solutions',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Block no 9, South Avenue, Shahpura',
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-                                    Text(
-                                      'Bhopal, Madhya Pradesh 462039, India',
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-                                    Text(
-                                      'Mobile: +1 (555) 123-4567',
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Invoice Details
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: selectedColor.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Invoice No.',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    Text(
-                                      widget.invoiceNumber,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: selectedColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Invoice Date',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    Text(
-                                      _formatDate(widget.date),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Customer Info (if available)
-                        if (widget.customerName.isNotEmpty || widget.customerPhone.isNotEmpty) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Bill To:',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: selectedColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                if (widget.customerName.isNotEmpty)
-                                  Text(
-                                    'Name: ${widget.customerName}',
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                if (widget.customerPhone.isNotEmpty)
-                                  Text(
-                                    'Phone: ${widget.customerPhone}',
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                        
-                        // Items Table
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: [
-                              // Table Header
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: selectedColor.withOpacity(0.1),
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(8),
-                                    topRight: Radius.circular(8),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        'S.No',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedColor,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Item',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedColor,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        'Qty',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedColor,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        'Rate',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedColor,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        'Amount',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedColor,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Table Rows
-                              ...widget.items.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final item = entry.value;
-                                final itemTotal = item['qty'] * item['price'];
-                                
-                                return Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: index.isEven ? Colors.grey[50] : Colors.white,
-                                    border: Border(
-                                      top: BorderSide(color: Colors.grey[300]!),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text('${index + 1}'),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          item['name'],
-                                          style: const TextStyle(fontWeight: FontWeight.w500),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text(
-                                          '${item['qty']}',
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text(
-                                          'Rs. ${_formatPrice(item['price'])}',
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text(
-                                          'Rs. ${_formatPrice(itemTotal)}',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: selectedColor,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Summary
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Subtotal:', style: TextStyle(fontSize: 16)),
-                                  Text('Rs. ${_formatPrice(_calculateSubtotal())}', style: const TextStyle(fontSize: 16)),
-                                ],
-                              ),
-                              if (widget.discount > 0) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Discount:', style: TextStyle(fontSize: 16)),
-                                    Text(
-                                      '- Rs. ${_formatPrice(widget.discount)}',
-                                      style: TextStyle(fontSize: 16, color: Colors.red[600]),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Tax (${_getTaxRate().toStringAsFixed(1)}%):', style: const TextStyle(fontSize: 16)),
-                                  Text('Rs. ${_formatPrice(_calculateTotalTax())}', style: const TextStyle(fontSize: 16)),
-                                ],
-                              ),
-                              if (widget.additionalCharges.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Additional Charges:', style: TextStyle(fontSize: 16)),
-                                    Text('Rs. ${_formatPrice(widget.additionalChargesTotal)}', style: const TextStyle(fontSize: 16)),
-                                  ],
-                                ),
-                              ],
-                              if (widget.roundoff != 0) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Roundoff:', style: TextStyle(fontSize: 16)),
-                                    Text(
-                                      widget.roundoff > 0
-                                          ? '+ Rs. ${_formatPrice(widget.roundoff)}'
-                                          : '- Rs. ${_formatPrice(widget.roundoff * -1)}',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: widget.roundoff > 0 ? Colors.green[600] : Colors.red[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              const Divider(height: 32),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'TOTAL:',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: selectedColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Rs. ${_formatPrice(_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff)}',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: selectedColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (widget.amountReceived > 0) ...[
-                                const SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Amount Received:', style: TextStyle(fontSize: 16)),
-                                    Text(
-                                      'Rs. ${_formatPrice(widget.amountReceived)}',
-                                      style: TextStyle(fontSize: 16, color: Colors.green[600]),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Balance:', style: TextStyle(fontSize: 16)),
-                                    Text(
-                                      'Rs. ${_formatPrice(widget.amountReceived - (_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff))}',
-                                      style: TextStyle(fontSize: 16, color: Colors.blue[600]),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Amount in Words
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: selectedColor.withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Amount in Words:',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: selectedColor,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _amountInWords(_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontStyle: FontStyle.italic,
-                                  color: selectedColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Terms
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Terms:',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: selectedColor,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text('1. Goods once sold will not be taken back or exchanged'),
-                              const Text('2. All disputes are subject to local jurisdiction only'),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Footer
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: selectedColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: selectedColor.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Thank you for your business!',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: selectedColor,
-                                ),
-                              ),
-                              Text(
-                                'ACT T CONNECT',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: selectedColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          Navigator.of(context).pop(); // Close preview
-                          await _generateAndShowPDF(context);
-                        },
-                        icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('Generate PDF'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(color: selectedColor, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close),
-                        label: const Text('Close'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: selectedColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    // Directly generate and show PDF instead of showing preview dialog
+    await _generateAndShowPDF(context);
   }
 
   // Generate and show PDF
@@ -2499,10 +1908,16 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
       builder: (BuildContext context) {
         return const AlertDialog(
           content: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text('Generating PDF...'),
+              Flexible(
+                child: Text(
+                  'Generating PDF...',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         );
@@ -2552,10 +1967,16 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
       builder: (BuildContext context) {
         return const AlertDialog(
           content: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text('Generating PDF for sharing...'),
+              Flexible(
+                child: Text(
+                  'Generating PDF for sharing...',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         );
@@ -2604,6 +2025,9 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
   // Generate PDF
   Future<Uint8List> _generatePDF() async {
     final pdf = pw.Document();
+    
+    // Convert selected color to PDF color
+    final pdfColor = PdfColor.fromInt(selectedColor.value);
 
     pdf.addPage(
       pw.Page(
@@ -2626,7 +2050,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                           style: pw.TextStyle(
                             fontSize: 24,
                             fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.blue900,
+                            color: pdfColor,
                           ),
                         ),
                         pw.Text(
@@ -2657,7 +2081,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         pw.Container(
                           padding: const pw.EdgeInsets.all(15),
                           decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: PdfColors.grey400),
+                            border: pw.Border.all(color: pdfColor),
                             borderRadius: pw.BorderRadius.circular(8),
                           ),
                           child: pw.Column(
@@ -2674,7 +2098,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                                 style: pw.TextStyle(
                                   fontSize: 18,
                                   fontWeight: pw.FontWeight.bold,
-                                  color: PdfColors.blue900,
+                                  color: pdfColor,
                                 ),
                               ),
                               pw.SizedBox(height: 10),
@@ -2736,52 +2160,52 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
 
                 // Items Table
                 pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey400),
+                  border: pw.TableBorder.all(color: pdfColor),
                   children: [
                     // Header
                     pw.TableRow(
-                      decoration: pw.BoxDecoration(color: PdfColors.grey200),
+                      decoration: pw.BoxDecoration(color: PdfColors.grey100),
                       children: [
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
                             'S.No',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
                             'Item',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
                             'Qty',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
                             'Rate',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
                             'Tax',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
                             'Amount',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
                       ],
@@ -2836,7 +2260,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                 pw.Container(
                   padding: const pw.EdgeInsets.all(15),
                   decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey400),
+                    border: pw.Border.all(color: pdfColor),
                     borderRadius: pw.BorderRadius.circular(8),
                   ),
                   child: pw.Column(
@@ -2943,7 +2367,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                             style: pw.TextStyle(
                               fontSize: 20,
                               fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.blue900,
+                              color: pdfColor,
                             ),
                           ),
                         ],
@@ -2989,6 +2413,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                   decoration: pw.BoxDecoration(
                     color: PdfColors.grey50,
                     borderRadius: pw.BorderRadius.circular(8),
+                    border: pw.Border.all(color: pdfColor),
                   ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2998,6 +2423,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         style: pw.TextStyle(
                           fontSize: 16,
                           fontWeight: pw.FontWeight.bold,
+                          color: pdfColor,
                         ),
                       ),
                       pw.SizedBox(height: 5),
@@ -3012,6 +2438,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         style: pw.TextStyle(
                           fontSize: 14,
                           fontStyle: pw.FontStyle.italic,
+                          color: pdfColor,
                         ),
                       ),
                     ],
@@ -3023,6 +2450,10 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                 // Terms
                 pw.Container(
                   padding: const pw.EdgeInsets.all(15),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: pdfColor),
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
@@ -3031,6 +2462,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         style: pw.TextStyle(
                           fontSize: 16,
                           fontWeight: pw.FontWeight.bold,
+                          color: pdfColor,
                         ),
                       ),
                       pw.SizedBox(height: 10),
@@ -3052,6 +2484,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                   decoration: pw.BoxDecoration(
                     color: PdfColors.grey50,
                     borderRadius: pw.BorderRadius.circular(8),
+                    border: pw.Border.all(color: pdfColor),
                   ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -3061,6 +2494,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         style: pw.TextStyle(
                           fontSize: 16,
                           fontWeight: pw.FontWeight.bold,
+                          color: pdfColor,
                         ),
                       ),
                       pw.SizedBox(height: 10),
@@ -3124,7 +2558,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                 pw.Container(
                   padding: const pw.EdgeInsets.all(15),
                   decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey400),
+                    border: pw.Border.all(color: pdfColor),
                     borderRadius: pw.BorderRadius.circular(8),
                   ),
                   child: pw.Column(
@@ -3134,7 +2568,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         style: pw.TextStyle(
                           fontSize: 16,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.blue900,
+                          color: pdfColor,
                         ),
                       ),
                       pw.SizedBox(height: 10),
@@ -3147,7 +2581,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         width: 100,
                         height: 100,
                         decoration: pw.BoxDecoration(
-                          border: pw.Border.all(color: PdfColors.grey400),
+                          border: pw.Border.all(color: pdfColor),
                           color: PdfColors.white,
                         ),
                         child: pw.Center(
@@ -3157,7 +2591,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                             style: pw.TextStyle(
                               fontSize: 10,
                               fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.grey600,
+                              color: pdfColor,
                             ),
                           ),
                         ),
@@ -3185,7 +2619,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                       style: pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.blue900,
+                        color: pdfColor,
                       ),
                     ),
                     pw.Text(
@@ -3193,6 +2627,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,
+                        color: pdfColor,
                       ),
                     ),
                   ],
