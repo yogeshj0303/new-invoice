@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../models/business_profile.dart';
+import '../models/customer.dart';
 import 'dart:io'; // Added for File
 
 class ApiService {
@@ -426,6 +427,209 @@ class ApiService {
         'success': false,
         ApiConstants.messageKey: 'Error updating business profile: ${e.toString()}',
         'businessProfile': null,
+      };
+    }
+  }
+
+  // Create Customer API
+  static Future<Map<String, dynamic>> createCustomer({
+    required String userId,
+    required String customerName,
+    required String companyName,
+    required String email,
+    required String phone,
+    required String gst,
+    required String gstTreatment,
+    required String placeOfSupply,
+    required String state,
+  }) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.customers}';
+      
+      // Build query parameters
+      final queryParams = <String, String>{
+        'user_id': userId,
+        'customer_name': customerName,
+        'company_name': companyName,
+        'email': email,
+        'phone': phone,
+        'gst': gst,
+        'gst_treatment': gstTreatment,
+        'place_of_supply': placeOfSupply,
+        'state': state,
+      };
+
+      // Build the final URL with query parameters
+      final uri = Uri.parse(url).replace(queryParameters: queryParams);
+      
+      print('🔍 [DEBUG] Create Customer Request:');
+      print('URL: $uri');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+      print('Query Parameters: $queryParams');
+
+      final response = await http.post(
+        uri,
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Create Customer Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['status'] == true) {
+          // Parse the customer data from response
+          Customer? customer;
+          try {
+            if (data['data'] != null) {
+              customer = Customer.fromJson(data['data']);
+              print('✅ [DEBUG] Successfully parsed customer from response');
+            } else {
+              print('⚠️ [DEBUG] No data field in response, customer will be null');
+            }
+          } catch (parseError) {
+            print('⚠️ [DEBUG] Error parsing customer from response: $parseError');
+            customer = null;
+          }
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'Customer created successfully',
+            'customer': customer,
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Failed to create customer',
+            'customer': null,
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to create customer';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+          'customer': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+        'customer': null,
+      };
+    }
+  }
+
+  // Get Customers List API
+  static Future<Map<String, dynamic>> getCustomers(String userId) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.customers}?user_id=$userId';
+      
+      print('🔍 [DEBUG] Get Customers Request:');
+      print('URL: $url');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Get Customers Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['status'] == true) {
+          // Parse the customers list from response
+          List<Customer> customers = [];
+          try {
+            if (data['data'] != null && data['data'] is List) {
+              customers = (data['data'] as List)
+                  .map((customerJson) => Customer.fromJson(customerJson))
+                  .toList();
+              print('✅ [DEBUG] Successfully parsed ${customers.length} customers from response');
+            } else {
+              print('⚠️ [DEBUG] No data field in response or data is not a list');
+            }
+          } catch (parseError) {
+            print('⚠️ [DEBUG] Error parsing customers from response: $parseError');
+            customers = [];
+          }
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'Customers loaded successfully',
+            'customers': customers,
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Failed to load customers',
+            'customers': [],
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to load customers';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+          'customers': [],
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+        'customers': [],
       };
     }
   }

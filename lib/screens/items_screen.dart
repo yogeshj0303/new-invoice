@@ -117,6 +117,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
           ),
         ),
         child: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
           elevation: 0,
           title: _isSearching

@@ -1,4 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../services/api_service.dart';
+import '../constants/api_constants.dart';
+
+// Custom text input formatter to convert text to uppercase
+class UpperCaseTextInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -14,74 +28,23 @@ class _CustomersScreenState extends State<CustomersScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _gstNumberController = TextEditingController();
+  final _placeOfSupplyController = TextEditingController();
   
   String? _selectedGstTreatment;
   String? _selectedState;
   
-  final List<String> _gstTreatments = [
-    'Unregistered Business',
-    'Registered Business',
-  ];
-  
-  final List<String> _indianStates = [
-    'Andhra Pradesh',
-    'Arunachal Pradesh',
-    'Assam',
-    'Bihar',
-    'Chhattisgarh',
-    'Goa',
-    'Gujarat',
-    'Haryana',
-    'Himachal Pradesh',
-    'Jharkhand',
-    'Karnataka',
-    'Kerala',
-    'Madhya Pradesh',
-    'Maharashtra',
-    'Manipur',
-    'Meghalaya',
-    'Mizoram',
-    'Nagaland',
-    'Odisha',
-    'Punjab',
-    'Rajasthan',
-    'Sikkim',
-    'Tamil Nadu',
-    'Telangana',
-    'Tripura',
-    'Uttar Pradesh',
-    'Uttarakhand',
-    'West Bengal',
-    'Delhi',
-    'Jammu and Kashmir',
-    'Ladakh',
-    'Chandigarh',
-    'Dadra and Nagar Haveli and Daman and Diu',
-    'Lakshadweep',
-    'Puducherry',
-    'Andaman and Nicobar Islands',
-  ];
-
   @override
-  void dispose() {
-    _customerNameController.dispose();
-    _companyNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _gstNumberController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
   }
 
   bool _isValidGSTNumber(String gstNumber) {
-    // GST number format: 2 digits state code + 10 digits PAN + 1 digit entity + 1 digit check sum
+    // GST number format: 15 alphanumeric characters
     // Example: 27AAPFU0939F1Z5
     if (gstNumber.length != 15) return false;
     
-    // Check if it starts with 2 digits (state code)
-    if (!RegExp(r'^\d{2}').hasMatch(gstNumber)) return false;
-    
-    // Check if it contains letters and numbers in the correct format
-    if (!RegExp(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$').hasMatch(gstNumber)) return false;
+    // Check if it contains only alphanumeric characters
+    if (!RegExp(r'^[A-Za-z0-9]{15}$').hasMatch(gstNumber)) return false;
     
     return true;
   }
@@ -95,37 +58,137 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return RegExp(r'^(\+91)?[6-9]\d{9}$').hasMatch(phone);
   }
 
-  void _saveCustomer() {
+  void _saveCustomer() async {
     if (_formKey.currentState!.validate()) {
-      // Here you would typically save the customer data
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Customer saved successfully!',
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.green[600],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          margin: EdgeInsets.all(8),
-        ),
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E3085)),
+            ),
+          );
+        },
       );
-      
-      // Clear form
-      _formKey.currentState!.reset();
-      setState(() {
-        _selectedGstTreatment = null;
-        _selectedState = null;
-      });
+
+      try {
+        // Call the API to create customer
+        final result = await ApiService.createCustomer(
+          userId: "1", // TODO: Get actual user ID from authentication
+          customerName: _customerNameController.text.trim(),
+          companyName: _companyNameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          gst: _gstNumberController.text.trim(),
+          gstTreatment: _selectedGstTreatment ?? '',
+          placeOfSupply: _placeOfSupplyController.text.trim(),
+          state: _selectedState ?? '',
+        );
+
+        // Hide loading indicator
+        Navigator.of(context).pop();
+
+        if (result['success'] == true) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      result[ApiConstants.messageKey] ?? 'Customer saved successfully!',
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green[600],
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              margin: EdgeInsets.all(8),
+            ),
+          );
+          
+          // Clear form
+          _formKey.currentState!.reset();
+          setState(() {
+            _selectedGstTreatment = null;
+            _selectedState = null;
+            _placeOfSupplyController.text = '';
+            _customerNameController.text = '';
+            _companyNameController.text = '';
+            _emailController.text = '';
+            _phoneController.text = '';
+            _gstNumberController.text = '';
+          });
+          
+          // Refresh customers list
+          // _loadCustomers(); // This line is removed as per the edit hint
+        } else {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      result[ApiConstants.messageKey] ?? 'Failed to save customer',
+                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red[600],
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              margin: EdgeInsets.all(8),
+            ),
+          );
+        }
+      } catch (e) {
+        // Hide loading indicator
+        Navigator.of(context).pop();
+        
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white, size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'An error occurred: ${e.toString()}',
+                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red[600],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            margin: EdgeInsets.all(8),
+          ),
+        );
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _customerNameController.dispose();
+    _companyNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _gstNumberController.dispose();
+    _placeOfSupplyController.dispose();
+    super.dispose();
   }
 
   @override
@@ -170,30 +233,60 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   return null;
                 }),
                 SizedBox(height: 12),
-                _buildInputField('Phone Number *', _phoneController, keyboardType: TextInputType.phone, isRequired: true, validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Phone number is required';
-                  }
-                  if (!_isValidPhone(value)) {
-                    return 'Please enter a valid 10-digit phone number';
-                  }
-                  return null;
-                }),
+                _buildInputField('Phone Number *', _phoneController, keyboardType: TextInputType.phone, isRequired: true, 
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Phone number is required';
+                    }
+                    if (!_isValidPhone(value)) {
+                      return 'Please enter a valid 10-digit phone number';
+                    }
+                    return null;
+                  },
+                  onChanged: (value) {
+                    // Unfocus after 10 digits
+                    if (value.length == 10) {
+                      FocusScope.of(context).unfocus();
+                    }
+                  },
+                ),
                 SizedBox(height: 12),
                 
                 // GST Information Section
                 _buildSectionHeader('GST Information'),
                 SizedBox(height: 8),
-                _buildInputField('GST Number', _gstNumberController, hintText: '27AAPFU0939F1Z5', helperText: 'Format: 2 digits state + 10 digits PAN + 1 digit entity + 1 digit checksum', validator: (value) {
-                  if (value != null && value.trim().isNotEmpty) {
-                    if (!_isValidGSTNumber(value.toUpperCase())) {
-                      return 'Please enter a valid GST number';
+                _buildInputField('GST Number', _gstNumberController, 
+                  hintText: '27AAPFU0939F1Z5', 
+                  helperText: 'Format: 15 alphanumeric characters', 
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                    LengthLimitingTextInputFormatter(15),
+                    UpperCaseTextInputFormatter(),
+                  ],
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      if (!_isValidGSTNumber(value)) {
+                        return 'Please enter a valid GST number';
+                      }
                     }
-                  }
-                  return null;
-                }),
+                    return null;
+                  },
+                  onChanged: (value) {
+                    // Unfocus after 15 characters
+                    if (value.length == 15) {
+                      FocusScope.of(context).unfocus();
+                    }
+                  },
+                ),
                 SizedBox(height: 12),
-                _buildDropdownField('GST Treatment *', _gstTreatments, _selectedGstTreatment, (value) {
+                _buildDropdownField('GST Treatment *', [
+                    'Unregistered Business',
+                    'Registered Business',
+                  ], _selectedGstTreatment, (value) {
                   setState(() {
                     _selectedGstTreatment = value;
                   });
@@ -204,7 +297,46 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   return null;
                 }),
                 SizedBox(height: 12),
-                _buildDropdownField('Place of Supply State *', _indianStates, _selectedState, (value) {
+                _buildInputField('Place of Supply', _placeOfSupplyController, hintText: 'Enter place of supply'),
+                SizedBox(height: 12),
+                _buildDropdownField('Place of Supply State *', [
+                    'Andhra Pradesh',
+                    'Arunachal Pradesh',
+                    'Assam',
+                    'Bihar',
+                    'Chhattisgarh',
+                    'Goa',
+                    'Gujarat',
+                    'Haryana',
+                    'Himachal Pradesh',
+                    'Jharkhand',
+                    'Karnataka',
+                    'Kerala',
+                    'Madhya Pradesh',
+                    'Maharashtra',
+                    'Manipur',
+                    'Meghalaya',
+                    'Mizoram',
+                    'Nagaland',
+                    'Odisha',
+                    'Punjab',
+                    'Rajasthan',
+                    'Sikkim',
+                    'Tamil Nadu',
+                    'Telangana',
+                    'Tripura',
+                    'Uttar Pradesh',
+                    'Uttarakhand',
+                    'West Bengal',
+                    'Delhi',
+                    'Jammu and Kashmir',
+                    'Ladakh',
+                    'Chandigarh',
+                    'Dadra and Nagar Haveli and Daman and Diu',
+                    'Lakshadweep',
+                    'Puducherry',
+                    'Andaman and Nicobar Islands',
+                  ], _selectedState, (value) {
                   setState(() {
                     _selectedState = value;
                   });
@@ -228,6 +360,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           setState(() {
                             _selectedGstTreatment = null;
                             _selectedState = null;
+                            _placeOfSupplyController.text = '';
+                            _customerNameController.text = '';
+                            _companyNameController.text = '';
+                            _emailController.text = '';
+                            _phoneController.text = '';
+                            _gstNumberController.text = '';
                           });
                         },
                         style: OutlinedButton.styleFrom(
@@ -272,12 +410,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 80), // Space for bottom navigation
+                SizedBox(height: 40), // Space for bottom navigation
               ],
             ),
           ),
         ),
       ),
+      // floatingActionButton: FloatingActionButton( // This line is removed as per the edit hint
+      //   onPressed: _showCustomersList,
+      //   backgroundColor: Color(0xFF2E3085),
+      //   child: Icon(Icons.people, color: Colors.white),
+      //   tooltip: 'View Customers',
+      // ),
     );
   }
 
@@ -292,6 +436,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ),
         ),
         child: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
           elevation: 0,
           title: Text(
@@ -344,6 +489,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
     bool isRequired = false,
     String? Function(String?)? validator,
     String? hintText,
+    List<TextInputFormatter>? inputFormatters,
+    Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,6 +549,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
             isDense: true,
           ),
           validator: validator,
+          inputFormatters: inputFormatters,
+          onChanged: onChanged,
         ),
       ],
     );
