@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:invoice_app/models/item.dart';
+import 'package:invoice_app/widgets/edit_bottom_sheet_content.dart';
 import 'invoice_created_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
-  const CreateInvoiceScreen({super.key});
+  final List<Map<String, dynamic>>? cartItems;
+  final Map<String, int>? itemQuantities;
+  
+  const CreateInvoiceScreen({
+    super.key, 
+    this.cartItems, 
+    this.itemQuantities,
+  });
 
   @override
   _CreateInvoiceScreenState createState() => _CreateInvoiceScreenState();
 }
 
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
-  final List<Map<String, dynamic>> items = [];
+  late List<Map<String, dynamic>> items;
   final TextEditingController itemController = TextEditingController();
   final TextEditingController qtyController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
@@ -43,6 +52,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   static const Color secondaryColor = Color(0xFF4E4AA8); // App's lighter blue
   static const Color backgroundColor = Color(0xFFFAFBFC);
   static const Color cardColor = Colors.white;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize items with cart data if available
+    if (widget.cartItems != null && widget.cartItems!.isNotEmpty) {
+      items = List.from(widget.cartItems!);
+    } else {
+      items = [];
+    }
+  }
 
   double get subtotal =>
       items.fold(0, (sum, item) => sum + (item['qty'] * item['price']));
@@ -183,6 +203,93 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
        additionalCharges.removeAt(index);
      });
    }
+
+  void _showQuantityDialog(BuildContext context, Map<String, dynamic> itemData) {
+    final quantityController = TextEditingController(text: '1');
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Add ${itemData['name']}',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: quantityController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Quantity',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Price: ₹${itemData['price']}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final quantity = double.tryParse(quantityController.text) ?? 1;
+                final finalItemData = Map<String, dynamic>.from(itemData);
+                finalItemData['qty'] = quantity;
+                
+                setState(() {
+                  items.add(finalItemData);
+                });
+                
+                Navigator.of(context).pop();
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${itemData['name']} added successfully'),
+                    backgroundColor: primaryColor,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Add',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
    
    @override
    void dispose() {
@@ -384,7 +491,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                          ),
                          TextButton(
                            onPressed: () {
-                             _showAddItemDialog(context);
+                             Navigator.of(context).pushNamed('/add-item').then((result) {
+                               if (result != null && result is Map<String, dynamic>) {
+                                 // Show quantity input dialog
+                                 _showQuantityDialog(context, result);
+                               }
+                             });
                            },
                            child: Text(
                              '+ Item',
@@ -475,12 +587,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                              color: primaryColor.withOpacity(0.1),
                                              borderRadius: BorderRadius.circular(3),
                                            ),
-                                           child: Text(
-                                             'EDIT',
-                                             style: theme.textTheme.bodySmall?.copyWith(
-                                               fontWeight: FontWeight.w600,
-                                               color: primaryColor,
-                                               fontSize: 9,
+                                           child: GestureDetector(
+                                             onTap: () => _editItem(item),
+                                             child: Text(
+                                               'EDIT',
+                                               style: theme.textTheme.bodySmall?.copyWith(
+                                                 fontWeight: FontWeight.w600,
+                                                 color: primaryColor,
+                                                 fontSize: 9,
+                                               ),
                                              ),
                                            ),
                                          ),
@@ -1644,94 +1759,42 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         );
       }
 
-  void _showAddItemDialog(BuildContext context) {
-    showDialog(
+  void _editItem(Map<String, dynamic> item) {
+    // Convert Map to Item object for EditBottomSheetContent
+    final itemObject = Item(
+      id: item['id'] ?? '',
+      name: item['name'] ?? '',
+      description: item['description'] ?? '',
+      salesPrice: (item['price'] ?? 0).toDouble(),
+      purchasePrice: (item['purchasePrice'] ?? 0).toDouble(),
+      unit: item['unit'] ?? 'PCS',
+      stockQuantity: (item['stockQuantity'] ?? 0).toInt(),
+      category: item['category'] ?? '',
+      createdAt: item['createdAt'] ?? DateTime.now(),
+    );
+
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            'Add Item',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: itemController,
-                decoration: InputDecoration(
-                  labelText: 'Item Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: qtyController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Quantity',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Price',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                addItem();
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Add',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
+        return _buildEditBottomSheet(itemObject);
       },
     );
   }
+
+  Widget _buildEditBottomSheet(Item item) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return EditBottomSheetContent(item: item);
+      },
+    );
+  }
+
+
 }
 
 class InvoicePreviewScreen extends StatelessWidget {

@@ -21,6 +21,8 @@ import 'package:invoice_app/screens/complete_profile_screen.dart';
 import 'package:invoice_app/screens/purchase_screen.dart';
 import 'package:invoice_app/screens/upload_bill_screen.dart';
 import 'package:invoice_app/screens/manage_companies_screen.dart';
+import 'package:invoice_app/screens/add_item_screen.dart';
+import 'package:invoice_app/screens/create_item_screen.dart';
 import 'package:invoice_app/screens/business_gst_settings_screen.dart';
 
 void main() {
@@ -234,6 +236,8 @@ class _RestaurantInvoiceAppState extends State<RestaurantInvoiceApp> {
         '/upload-bill': (context) => const UploadBillScreen(),
         '/create-purchase': (context) => const CreatePurchaseScreen(),
         '/manage-companies': (context) => const ManageCompaniesScreen(),
+        '/add-item': (context) => const AddItemScreen(),
+        '/create-item': (context) => const CreateItemScreen(),
       },
       debugShowCheckedModeBanner: false,
     );
