@@ -603,11 +603,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                               print('Category selected: $newValue'); // Debug print
                               setState(() {
                                 _selectedCategory = newValue;
-                              });
+                                }
+                              );
                               print('Selected category updated to: $_selectedCategory'); // Debug print
                             }
                           },
-                                                     items: _getSafeDropdownItems(),
+                          items: _getSafeDropdownItems(),
                         ),
                       ),
                 ),
