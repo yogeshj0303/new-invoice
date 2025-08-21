@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
+import '../models/business_profile.dart';
+import 'dart:io'; // Added for File
 
 class ApiService {
   // Send OTP API
@@ -221,6 +223,209 @@ class ApiService {
         ApiConstants.successKey: false,
         ApiConstants.messageKey: 'Network error: ${e.toString()}',
         ApiConstants.errorKey: 'Exception',
+      };
+    }
+  }
+
+  // Get Business Profile API
+  static Future<Map<String, dynamic>> getBusinessProfile(int userId) async {
+    try {
+      final url = '${ApiConstants.baseURL}/api/business-profiles?user_id=$userId';
+      final response = await http.get(Uri.parse(url), headers: ApiConstants.defaultHeaders);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == true && data['data'] != null && data['data'].isNotEmpty) {
+          final businessProfile = BusinessProfile.fromJson(data['data'][0]);
+          return {
+            'success': true, // Use 'success' for consistency with other methods
+            'businessProfile': businessProfile,
+            ApiConstants.messageKey: 'Business profile loaded successfully',
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: 'No business profile found',
+            'businessProfile': null,
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Failed to load business profile. Status: ${response.statusCode}',
+          'businessProfile': null,
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Error loading business profile: ${e.toString()}',
+        'businessProfile': null,
+      };
+    }
+  }
+
+  // Update Business Profile API
+  static Future<Map<String, dynamic>> updateBusinessProfile({
+    required int userId,
+    required String businessName,
+    required String gstNo,
+    required String phoneNoFirst,
+    String? phoneNoSecond,
+    required String email,
+    String? businessEmail,
+    required String businessAddress,
+    required String pincode,
+    required String businessDesc,
+    required String businessCategory,
+    String? website,
+    required String businessState,
+    required String businessType,
+    String? digitalSign,
+    String? businessSignature,
+  }) async {
+    try {
+      final url = '${ApiConstants.baseURL}/api/business-profiles?user_id=$userId';
+      
+      // Build query parameters
+      final queryParams = <String, String>{
+        'user_id': userId.toString(),
+        'business_name': businessName,
+        'gst_no': gstNo,
+        'phone_no_first': phoneNoFirst,
+        'email': email,
+        'business_address': businessAddress,
+        'pincode': pincode,
+        'business_desc': businessDesc,
+        'business_category': businessCategory,
+        'business_state': businessState,
+        'business_type': businessType,
+      };
+
+      // Add optional parameters if they exist
+      if (phoneNoSecond != null && phoneNoSecond.isNotEmpty) {
+        queryParams['phone_no_second'] = phoneNoSecond;
+      }
+      if (businessEmail != null && businessEmail.isNotEmpty) {
+        queryParams['business_email'] = businessEmail;
+      }
+      if (website != null && website.isNotEmpty) {
+        queryParams['website'] = website;
+      }
+
+      // Build the final URL with query parameters
+      final uri = Uri.parse(url).replace(queryParameters: queryParams);
+      
+      print('🔍 [DEBUG] Update Business Profile Request:');
+      print('URL: $uri');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+
+      // Create multipart request for file uploads
+      final request = http.MultipartRequest('POST', uri);
+      
+      // Add headers
+      request.headers.addAll(ApiConstants.defaultHeaders);
+      
+      // Add form fields
+      request.fields.addAll(queryParams);
+      
+      // Add digital signature if exists
+      if (digitalSign != null && digitalSign.isNotEmpty) {
+        // If digitalSign is a file path, add it as a file
+        if (digitalSign.startsWith('/') || digitalSign.contains('\\')) {
+          final file = File(digitalSign);
+          if (await file.exists()) {
+            final stream = http.ByteStream(file.openRead());
+            final length = await file.length();
+            final multipartFile = http.MultipartFile(
+              'digital_sign',
+              stream,
+              length,
+              filename: file.path.split('/').last,
+            );
+            request.files.add(multipartFile);
+          }
+        } else {
+          // If it's base64 or other format, add as field
+          request.fields['digital_sign'] = digitalSign;
+        }
+      }
+      
+      // Add business signature if exists
+      if (businessSignature != null && businessSignature.isNotEmpty) {
+        // If businessSignature is a file path, add it as a file
+        if (businessSignature.startsWith('/') || businessSignature.contains('\\')) {
+          final file = File(businessSignature);
+          if (await file.exists()) {
+            final stream = http.ByteStream(file.openRead());
+            final length = await file.length();
+            final multipartFile = http.MultipartFile(
+              'business_signature',
+              stream,
+              length,
+              filename: file.path.split('/').last,
+            );
+            request.files.add(multipartFile);
+          }
+        } else {
+          // If it's base64 or other format, add as field
+          request.fields['business_signature'] = businessSignature;
+        }
+      }
+
+      print('📡 [DEBUG] Sending multipart request...');
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      
+      print('📡 [DEBUG] Update Business Profile Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: $responseBody');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseBody);
+        print('🔍 [DEBUG] Parsed response data: $data');
+        
+        if (data['status'] == true) {
+          // Safely handle the businessProfile data
+          BusinessProfile? businessProfile;
+          try {
+            if (data['data'] != null) {
+              businessProfile = BusinessProfile.fromJson(data['data']);
+              print('✅ [DEBUG] Successfully parsed business profile from response');
+            } else {
+              print('⚠️ [DEBUG] No data field in response, businessProfile will be null');
+            }
+          } catch (parseError) {
+            print('⚠️ [DEBUG] Error parsing business profile from response: $parseError');
+            businessProfile = null;
+          }
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'Business profile updated successfully',
+            'businessProfile': businessProfile,
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Failed to update business profile',
+            'businessProfile': null,
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Failed to update business profile. Status: ${response.statusCode}',
+          'businessProfile': null,
+        };
+      }
+    } catch (e) {
+      print('❌ [ERROR] Update Business Profile Exception: $e');
+      print('❌ [ERROR] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Error updating business profile: ${e.toString()}',
+        'businessProfile': null,
       };
     }
   }

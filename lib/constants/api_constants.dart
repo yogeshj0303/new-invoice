@@ -16,6 +16,6 @@ class ApiConstants {
   // API Response Keys
   static const String messageKey = 'message';
   static const String otpKey = 'otp';
-  static const String successKey = 'success';
+  static const String successKey = 'status'; // Changed from 'success' to 'status' to match API
   static const String errorKey = 'error';
 } 
