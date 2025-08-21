@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../models/item.dart';
+import '../services/api_service.dart';
+import '../constants/api_constants.dart';
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -19,12 +23,36 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   final _unitController = TextEditingController();
   final _salesPriceController = TextEditingController();
   final _purchasePriceController = TextEditingController();
+  final _mrpPriceController = TextEditingController();
   final _hsnController = TextEditingController();
+  final _openingStockController = TextEditingController();
+  final _lowAlertQuantityController = TextEditingController();
+  final _itemDescriptionController = TextEditingController();
 
   String _selectedGst = 'None';
   bool _withTax = false;
   String _selectedTab = 'Pricing';
   bool _lowStockAlert = false;
+  String _selectedCategory = 'Select Category';
+  String _showOnlineStore = 'false';
+  DateTime? _selectedDate;
+  bool _isLoading = false;
+  String? _selectedImagePath; // Added for image validation
+
+  // Categories from API
+  List<Map<String, dynamic>> _categories = [];
+  bool _isLoadingCategories = false;
+  
+  // Image picker
+  final ImagePicker _imagePicker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+    // Ensure initial GST value is valid
+    _selectedGst = 'None';
+  }
 
   @override
   void dispose() {
@@ -32,7 +60,11 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     _unitController.dispose();
     _salesPriceController.dispose();
     _purchasePriceController.dispose();
+    _mrpPriceController.dispose();
     _hsnController.dispose();
+    _openingStockController.dispose();
+    _lowAlertQuantityController.dispose();
+    _itemDescriptionController.dispose();
     super.dispose();
   }
 
@@ -49,7 +81,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         body: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            // physics: const NeverScrollableScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
@@ -59,7 +90,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                   _buildTabBar(),
                   const SizedBox(height: 12),
                   _buildTabContent(),
-                  // const SizedBox(height: 80), // Space for bottom button
                 ],
               ),
             ),
@@ -220,28 +250,68 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildCompactFormField(
-                    'GST',
-                    isDropdown: true,
-                    value: _selectedGst,
-                    onChanged: (value) => setState(() => _selectedGst = value!),
-                    items: ['None', '5%', '12%', '18%', '28%'],
-                    icon: Icons.receipt_long_outlined,
+                    'MRP Price',
+                    controller: _mrpPriceController,
+                    hintText: '₹ 150',
+                    keyboardType: TextInputType.number,
+                    icon: Icons.attach_money,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            _buildCompactFormField(
-              'HSN',
-              controller: _hsnController,
-              hintText: 'Ex: 6704',
-              suffix: IconButton(
-                icon: const Icon(Icons.search, color: primaryColor, size: 18),
-                onPressed: () {
-                  // TODO: Search HSN
-                },
-              ),
-              icon: Icons.numbers,
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactFormField(
+                    'GST',
+                    isDropdown: true,
+                    value: _selectedGst,
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedGst = value);
+                      }
+                    },
+                    items: const [
+                      'None',
+                      'Tax Exempted',
+                      'GST @ 0%',
+                      'GST @ 0.1%',
+                      'GST @ 0.25%',
+                      'GST @ 1%',
+                      'GST @ 3%',
+                      'GST @ 5%',
+                      'GST @ 6%',
+                      'GST @ 12%',
+                      'GST @ 13.8%',
+                      'GST @ 14%',
+                      'GST @ 14% + Cess @ 12%',
+                      'GST @ 18%',
+                      'GST @ 28%',
+                      'GST @ 28% + Cess @ 5%',
+                      'GST @ 28% + Cess @ 12%',
+                      'GST @ 28% + Cess @ 36%',
+                      'GST @ 28% + Cess @ 60%',
+                    ],
+                    icon: Icons.receipt_long_outlined,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactFormField(
+                    'HSN',
+                    controller: _hsnController,
+                    hintText: 'Ex: 6704',
+                    suffix: IconButton(
+                      icon: const Icon(Icons.search, color: primaryColor, size: 18),
+                      onPressed: () {
+                        // TODO: Search HSN
+                      },
+                    ),
+                    icon: Icons.numbers,
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -254,6 +324,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 Expanded(
                   child: _buildCompactFormField(
                     'Opening Stock',
+                    controller: _openingStockController,
                     hintText: 'Ex: 35',
                     keyboardType: TextInputType.number,
                     icon: Icons.inventory,
@@ -268,10 +339,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                     border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'PCS',
-                      style: TextStyle(
+                      _unitController.text.isNotEmpty ? _unitController.text : 'PCS',
+                      style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF666666),
                         fontWeight: FontWeight.w500,
@@ -284,16 +355,16 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             const SizedBox(height: 12),
             _buildCompactFormField(
               'As of Date',
-              hintText: '02 Aug 2025',
+              hintText: _selectedDate != null 
+                  ? '${_selectedDate!.day} ${_getMonthName(_selectedDate!.month)} ${_selectedDate!.year}'
+                  : '02 Aug 2025',
               suffix: IconButton(
                 icon: const Icon(
                   Icons.calendar_today_outlined,
                   color: primaryColor,
                   size: 18,
                 ),
-                onPressed: () {
-                  // TODO: Show date picker
-                },
+                onPressed: () => _selectDate(context),
               ),
               icon: Icons.calendar_month_outlined,
             ),
@@ -304,6 +375,16 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
               _lowStockAlert,
               (value) => setState(() => _lowStockAlert = value),
             ),
+            if (_lowStockAlert) ...[
+              const SizedBox(height: 12),
+              _buildCompactFormField(
+                'Low Alert Quantity',
+                controller: _lowAlertQuantityController,
+                hintText: 'Ex: 10',
+                keyboardType: TextInputType.number,
+                icon: Icons.warning_amber_outlined,
+              ),
+            ],
           ],
         );
       case 'Other':
@@ -311,18 +392,73 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           children: [
             _buildCompactImageUpload(),
             const SizedBox(height: 12),
-            _buildCompactFormField(
-              'Item Category',
-              isDropdown: true,
-              value: 'Select Category',
-              items: ['Select Category', 'Food', 'Beverages', 'Snacks'],
-              icon: Icons.category_outlined,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildCompactFormField(
+                        'Item Category *${_categories.isNotEmpty ? ' (${_categories.length} available)' : ''}',
+                        isDropdown: true,
+                        value: _selectedCategory,
+                        onChanged: (value) {
+                          if (value == '➕ Add Category') {
+                            _showAddCategoryBottomSheet();
+                          } else {
+                            setState(() => _selectedCategory = value!);
+                          }
+                        },
+                        items: _isLoadingCategories 
+                          ? ['Loading...'] 
+                          : _categories.isEmpty 
+                            ? ['No categories available', '➕ Add Category']
+                            : ['Select Category', ..._categories.map((cat) {
+                                print('🔍 [DEBUG] Category: ${cat['item_category_name']} (ID: ${cat['id']})');
+                                // Make each category name unique by adding ID if duplicates exist
+                                final baseName = cat['item_category_name'] as String;
+                                final categoryId = cat['id'] as int;
+                                return '$baseName (ID: $categoryId)';
+                              }), '➕ Add Category'],
+                        icon: Icons.category_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                                         Container(
+                       margin: const EdgeInsets.only(top: 24), // Align with dropdown
+                       child: Container(
+                         decoration: BoxDecoration(
+                           color: Colors.grey[100],
+                           borderRadius: BorderRadius.circular(8),
+                           border: Border.all(color: Colors.grey[300]!),
+                         ),
+                         child: IconButton(
+                           onPressed: _loadCategories,
+                           icon: Icon(
+                             _isLoadingCategories ? Icons.hourglass_empty : Icons.refresh,
+                             color: _isLoadingCategories ? Colors.grey : primaryColor,
+                             size: 20,
+                           ),
+                           tooltip: 'Refresh Categories',
+                           padding: const EdgeInsets.all(8),
+                         ),
+                       ),
+                     ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 12),
-            _buildCompactCustomFieldsButton(),
+            _buildCompactSwitchTile(
+              'Show in Online Store',
+              Icons.storefront_outlined,
+              _showOnlineStore == 'true',
+              (value) => setState(() => _showOnlineStore = value ? 'true' : 'false'),
+            ),
             const SizedBox(height: 12),
             _buildCompactFormField(
               'Item Description',
+              controller: _itemDescriptionController,
               hintText: 'Ex: 100% Real Mixed Fruit Jam',
               keyboardType: TextInputType.multiline,
               maxLines: 2,
@@ -335,68 +471,599 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     }
   }
 
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
   Widget _buildCompactImageUpload() {
     return Container(
-      height: 80,
+      height: _selectedImagePath != null ? 120 : 80,
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: primaryColor.withOpacity(0.2),
-          width: 1.5,
+          color: _selectedImagePath != null ? Colors.green : primaryColor.withOpacity(0.2),
+          width: _selectedImagePath != null ? 2.0 : 1.5,
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.camera_alt_outlined,
-            color: primaryColor,
-            size: 24,
+      child: InkWell(
+        onTap: _selectedImagePath != null ? _showImagePreview : _showImageSourceDialog,
+        child: _selectedImagePath != null
+            ? Stack(
+                children: [
+                  // Show the selected image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: FutureBuilder<bool>(
+                      future: File(_selectedImagePath!).exists(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data == true) {
+                          return Image.file(
+                            File(_selectedImagePath!),
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              );
+                            },
+                          );
+                        } else {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  // Overlay with clear button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedImagePath = null;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Add image overlay text
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Tap to change image',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.camera_alt_outlined,
+                    color: primaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Add Image *',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  void _showImageSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Add Image',
+          title: const Text(
+            'Select Image Source',
             style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ],
-      ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: primaryColor),
+                title: const Text('Camera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFromCamera();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: primaryColor),
+                title: const Text('Gallery'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImageFromGallery();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCompactCustomFieldsButton() {
-    return Container(
-      height: 40,
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          // TODO: Handle add fields
-        },
-        label: const Text(
-          'Custom Fields',
-          style: TextStyle(
-            color: primaryColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          side: const BorderSide(color: primaryColor, width: 1.5),
+  void _showImagePreview() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Image preview
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+                child: Image.file(
+                  File(_selectedImagePath!),
+                  width: 300,
+                  height: 300,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 300,
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 60,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Action buttons
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showImageSourceDialog();
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Change'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.check),
+                      label: const Text('OK'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
+  Future<void> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      
+      if (image != null) {
+        // Validate image file
+        final file = File(image.path);
+        if (await file.exists()) {
+          final fileSize = await file.length();
+          final maxSize = 5 * 1024 * 1024; // 5MB limit
+          
+          if (fileSize > maxSize) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Image size too large. Please select an image under 5MB.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+          
+          setState(() {
+            _selectedImagePath = image.path;
+          });
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking image: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      
+      if (image != null) {
+        // Validate image file
+        final file = File(image.path);
+        if (await file.exists()) {
+          final fileSize = await file.length();
+          final maxSize = 5 * 1024 * 1024; // 5MB limit
+          
+          if (fileSize > maxSize) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Image size too large. Please select an image under 5MB.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+          
+          setState(() {
+            _selectedImagePath = image.path;
+          });
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking image: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() {
+      _isLoadingCategories = true;
+    });
+
+    try {
+      final response = await ApiService.getItemCategories();
+      print('🔍 [DEBUG] Categories API Response: $response');
+      
+      if (response['status'] == true && response['data'] != null) {
+        setState(() {
+          _categories = List<Map<String, dynamic>>.from(response['data']);
+        });
+        print('✅ [DEBUG] Loaded ${_categories.length} categories');
+      } else {
+        print('⚠️ [DEBUG] Categories API returned: ${response['message'] ?? 'Unknown error'}');
+        setState(() {
+          _categories = [];
+        });
+      }
+    } catch (e) {
+      print('❌ [DEBUG] Error loading categories: $e');
+      // Fallback to empty list
+      setState(() {
+        _categories = [];
+      });
+    } finally {
+      setState(() {
+        _isLoadingCategories = false;
+      });
+    }
+  }
+
+  void _showAddCategoryBottomSheet() {
+    final TextEditingController categoryController = TextEditingController();
+    bool isCreating = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+            final screenHeight = MediaQuery.of(context).size.height;
+            final bottomSheetHeight = screenHeight * 0.4;
+            
+            return Container(
+              height: bottomSheetHeight + keyboardHeight,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: keyboardHeight > 0 ? keyboardHeight + 20 : 20,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.add_circle_outline,
+                            color: primaryColor,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Add New Category',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.grey[100],
+                              padding: const EdgeInsets.all(8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Category Name Input
+                      Text(
+                        'Category Name *',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: categoryController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter category name (e.g., Electronics, Food)',
+                          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: primaryColor, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.category_outlined,
+                            color: primaryColor,
+                          ),
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                        maxLength: 50,
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Create Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: isCreating ? null : () async {
+                            final categoryName = categoryController.text.trim();
+                            if (categoryName.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please enter a category name'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            setModalState(() {
+                              isCreating = true;
+                            });
+
+                            try {
+                              final result = await ApiService.createItemCategory(categoryName);
+                              
+                              if (result['status'] == true) {
+                                // Show success message
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(result['message'] ?? 'Category created successfully'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  
+                                  // Close bottom sheet
+                                  Navigator.of(context).pop();
+                                  
+                                  // Refresh categories list
+                                  _loadCategories();
+                                  
+                                  // Auto-select the newly created category
+                                  if (result['data'] != null) {
+                                    final newCategory = result['data'];
+                                    final newCategoryName = newCategory['item_category_name'] as String;
+                                    final newCategoryId = newCategory['id'] as int;
+                                    setState(() {
+                                      _selectedCategory = '$newCategoryName (ID: $newCategoryId)';
+                                    });
+                                  }
+                                }
+                              } else {
+                                // Show error message
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(result['message'] ?? 'Failed to create category'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (context.mounted) {
+                                setModalState(() {
+                                  isCreating = false;
+                                });
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: isCreating
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Create Category',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildCompactSwitchTile(String title, IconData icon, bool value, ValueChanged<bool> onChanged) {
     return Container(
@@ -428,39 +1095,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             onChanged: onChanged,
             activeColor: primaryColor,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactEmptyState(IconData icon, String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 32,
-            color: primaryColor,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
           ),
         ],
       ),
@@ -524,14 +1158,18 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: value,
+                value: (items != null && items.isNotEmpty && value != null && items.contains(value)) ? value : null,
                 isExpanded: true,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                items: items?.map<DropdownMenuItem<String>>((String value) {
+                hint: Text(
+                  value ?? 'Select',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                items: (items ?? []).map<DropdownMenuItem<String>>((String item) {
                   return DropdownMenuItem<String>(
-                    value: value,
+                    value: item,
                     child: Text(
-                      value,
+                      item,
                       style: const TextStyle(fontSize: 12),
                     ),
                   );
@@ -625,7 +1263,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       ),
       child: SafeArea(
         child: ElevatedButton(
-          onPressed: _saveItem,
+          onPressed: _isLoading ? null : _saveItem,
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             elevation: 0,
@@ -634,23 +1272,160 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             ),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          child: const Text(
-            'Save Item',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text(
+                  'Save Item',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ),
     );
   }
 
-  void _saveItem() {
+  void _saveItem() async {
+    // Validate required fields
+    if (_selectedImagePath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an image for the item'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate image file exists
+    final imageFile = File(_selectedImagePath!);
+    if (!await imageFile.exists()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selected image file not found. Please select again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedCategory == 'Select Category' || _selectedCategory == 'Loading...' || _selectedCategory == '➕ Add Category') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a category for the item'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
-      // TODO: Save item logic
-      Navigator.of(context).pop();
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Extract GST percentage from selected value
+        String? gstValue;
+        if (_selectedGst != 'None' && _selectedGst != 'Tax Exempted') {
+          // Handle different GST formats
+          if (_selectedGst.startsWith('GST @ ')) {
+            // Extract the main GST percentage
+            final gstMatch = RegExp(r'GST @ ([\d.]+)%').firstMatch(_selectedGst);
+            if (gstMatch != null) {
+              gstValue = gstMatch.group(1);
+            }
+          } else {
+            // Handle legacy format (e.g., "5%")
+            gstValue = _selectedGst.replaceAll('%', '');
+          }
+        }
+
+        // Extract category ID from selected category
+        int? categoryId;
+        if (_selectedCategory != 'Select Category' && _selectedCategory != 'Loading...') {
+          // Handle both formats: "name" and "name (ID: X)"
+          final selectedCategory = _categories.firstWhere(
+            (cat) {
+              final baseName = cat['item_category_name'] as String;
+              final categoryId = cat['id'] as int;
+              final formattedName = '$baseName (ID: $categoryId)';
+              return _selectedCategory == baseName || _selectedCategory == formattedName;
+            },
+            orElse: () => <String, dynamic>{},
+          );
+          categoryId = selectedCategory['id'] as int?;
+        }
+
+        final result = await ApiService.createItem(
+          userId: '1', // TODO: Get actual user ID from auth service
+          itemName: _nameController.text.trim(),
+          unit: _unitController.text.trim().isNotEmpty ? _unitController.text.trim() : null,
+          salesPriceAmount: _salesPriceController.text.trim().isNotEmpty ? _salesPriceController.text.trim() : null,
+          salesPriceTax: _withTax ? 1 : 0,
+          purchasePriceAmount: _purchasePriceController.text.trim().isNotEmpty ? _purchasePriceController.text.trim() : null,
+          purchasePriceTax: _withTax ? 1 : 0,
+          mrpPrice: _mrpPriceController.text.trim().isNotEmpty ? _mrpPriceController.text.trim() : null,
+          gst: gstValue,
+          openingStock: _openingStockController.text.trim().isNotEmpty ? int.tryParse(_openingStockController.text.trim()) : null,
+          asOfDate: _selectedDate?.toIso8601String().split('T')[0],
+          lowAlertStatus: _lowStockAlert ? 'true' : 'false',
+          lowAlertQuantity: _lowAlertQuantityController.text.trim().isNotEmpty ? int.tryParse(_lowAlertQuantityController.text.trim()) : null,
+          itemCategoryId: categoryId,
+          itemDescription: _itemDescriptionController.text.trim().isNotEmpty ? _itemDescriptionController.text.trim() : null,
+          showOnlineStore: _showOnlineStore,
+          imagePaths: _selectedImagePath != null ? [_selectedImagePath!] : null,
+        );
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (result['success'] == true) {
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result[ApiConstants.messageKey] ?? 'Item created successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.of(context).pop(true); // Return true to indicate success
+          }
+        } else {
+          // Show error message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result[ApiConstants.messageKey] ?? 'Failed to create item'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 }

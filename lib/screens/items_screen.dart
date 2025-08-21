@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/item.dart';
+import '../services/api_service.dart';
+import '../constants/api_constants.dart';
 import 'create_item_screen.dart';
 
 class ItemsScreen extends StatefulWidget {
@@ -21,6 +23,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+  bool _isLoading = false;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -29,54 +34,34 @@ class _ItemsScreenState extends State<ItemsScreen> {
     _searchController.addListener(_onSearchChanged);
   }
 
-  void _loadItems() {
-    // Sample data
-    _items = [
-      Item(
-        id: '1',
-        name: 'Margherita Pizza',
-        description: 'Classic Margherita Pizza',
-        salesPrice: 12.99,
-        purchasePrice: 8.99,
-        category: 'Pizza',
-        unit: 'pieces',
-        stockQuantity: 50,
-        createdAt: DateTime.now(),
-      ),
-      Item(
-        id: '2',
-        name: 'Chicken Burger',
-        description: 'Grilled Chicken Burger',
-        salesPrice: 8.99,
-        purchasePrice: 5.99,
-        category: 'Burgers',
-        unit: 'pieces',
-        stockQuantity: 30,
-        createdAt: DateTime.now(),
-      ),
-      Item(
-        id: '3',
-        name: 'French Fries',
-        description: 'Crispy French Fries',
-        salesPrice: 4.99,
-        purchasePrice: 2.99,
-        category: 'Sides',
-        unit: 'servings',
-        stockQuantity: 100,
-        createdAt: DateTime.now(),
-      ),
-      Item(
-        id: '4',
-        name: 'Coca Cola',
-        description: 'Refreshing Coca Cola',
-        salesPrice: 2.99,
-        purchasePrice: 1.99,
-        category: 'Beverages',
-        unit: 'bottles',
-        stockQuantity: 200,
-        createdAt: DateTime.now(),
-      ),
-    ];
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      final result = await ApiService.getItems('1'); // TODO: Get actual user ID from auth service
+      
+      if (result['success'] == true) {
+        setState(() {
+          _items = result['items'] as List<Item>;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _hasError = true;
+          _errorMessage = result[ApiConstants.messageKey] ?? 'Failed to load items';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Error: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
   }
 
   void _onSearchChanged() {
@@ -96,10 +81,78 @@ class _ItemsScreenState extends State<ItemsScreen> {
         children: [
           _buildFilters(),
           Expanded(
-            child:
-                filteredItems.isEmpty
-                    ? _buildEmptyState()
-                    : _buildItemsList(filteredItems),
+            child: _isLoading
+                ? _buildLoadingState()
+                : _hasError
+                    ? _buildErrorState()
+                    : filteredItems.isEmpty
+                        ? _buildEmptyState()
+                        : _buildItemsList(filteredItems),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Loading items...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load items',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadItems,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Retry'),
           ),
         ],
       ),
@@ -232,11 +285,15 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   ],
                 ),
                 child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const CreateItemScreen()),
                     );
+                    // Refresh items after creating a new one
+                    if (result == true) {
+                      _loadItems();
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -263,36 +320,21 @@ class _ItemsScreenState extends State<ItemsScreen> {
           // Low Stock Toggle
           FilterChip(
             label: const Text('Low Stock', style: TextStyle(fontSize: 13)),
-            selected: false, // This state variable is not used in the new code
+            selected: false,
             onSelected: (bool value) {
-              // setState(() {
-              //   _showLowStock = value;
-              // });
+              // TODO: Implement low stock filter
             },
             backgroundColor: Colors.white,
             selectedColor: primaryColor.withOpacity(0.1),
             checkmarkColor: primaryColor,
             labelStyle: TextStyle(
-              color:
-                  false
-                      ? primaryColor
-                      : Colors
-                          .grey[800], // This state variable is not used in the new code
-              fontWeight:
-                  false
-                      ? FontWeight.w500
-                      : FontWeight
-                          .normal, // This state variable is not used in the new code
+              color: Colors.grey[800],
+              fontWeight: FontWeight.normal,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
               side: BorderSide(
-                color:
-                    false
-                        ? primaryColor
-                        : Colors.grey.withOpacity(
-                          0.3,
-                        ), // This state variable is not used in the new code
+                color: Colors.grey.withOpacity(0.3),
               ),
             ),
           ),
@@ -319,18 +361,17 @@ class _ItemsScreenState extends State<ItemsScreen> {
                       _selectedCategory = newValue!;
                     });
                   },
-                  items:
-                      <String>[
-                        'All Items',
-                        'Food',
-                        'Beverages',
-                        'Desserts',
-                      ].map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
+                  items: <String>[
+                    'All Items',
+                    'Food',
+                    'Beverages',
+                    'Desserts',
+                  ].map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -367,31 +408,82 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   Widget _buildItemsList(List<Item> items) {
-    return ListView.builder(
-      itemCount: items.length,
-      padding: const EdgeInsets.only(
-        left: 8,
-        right: 8,
-        top: 8,
-        bottom: 8,
+    return RefreshIndicator(
+      onRefresh: _loadItems,
+      color: primaryColor,
+      child: ListView.builder(
+        itemCount: items.length,
+        padding: const EdgeInsets.only(
+          left: 8,
+          right: 8,
+          top: 8,
+          bottom: 8,
+        ),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _buildItemCard(item);
+        },
       ),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _buildItemCard(item);
-      },
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Text(
-        'No items found. Add a new item!',
-        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No items found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your first item to get started',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CreateItemScreen()),
+              );
+              if (result == true) {
+                _loadItems();
+              }
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Item'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildItemCard(Item item) {
+    // Get the first pricing and stock info
+    final pricing = item.pricings.isNotEmpty ? item.pricings.first : null;
+    final stock = item.stocks.isNotEmpty ? item.stocks.first : null;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -409,7 +501,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {},
+          onTap: () {
+            // TODO: Navigate to item detail/edit screen
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -418,6 +512,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Item image or placeholder
                     Container(
                       width: 38,
                       height: 38,
@@ -438,7 +533,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          'S',
+                          item.itemName.isNotEmpty ? item.itemName[0].toUpperCase() : 'I',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -454,7 +549,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.name,
+                            item.itemName,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -463,11 +558,13 @@ class _ItemsScreenState extends State<ItemsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            item.description,
+                            item.details.itemDescription ?? 'No description',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -476,7 +573,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '${item.stockQuantity.toStringAsFixed(2)}',
+                          stock?.openingStock?.toString() ?? '0',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -485,7 +582,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item.unit.toUpperCase(),
+                          pricing?.unit?.toUpperCase() ?? 'PCS',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[600],
@@ -498,7 +595,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    SizedBox(width: 50),
+                    const SizedBox(width: 50),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -512,7 +609,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '₹ ${item.salesPrice}',
+                          pricing?.salespriceAmount != null 
+                              ? '₹ ${pricing!.salespriceAmount}'
+                              : '₹ 0.00',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -535,7 +634,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '₹ ${item.purchasePrice}',
+                          pricing?.purchesPriceAmount != null 
+                              ? '₹ ${pricing!.purchesPriceAmount}'
+                              : '₹ 0.00',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -545,24 +646,70 @@ class _ItemsScreenState extends State<ItemsScreen> {
                       ],
                     ),
                     const Spacer(),
-                                         Container(
-                       padding: const EdgeInsets.all(6),
-                       decoration: BoxDecoration(
-                         color: Colors.grey[50],
-                         borderRadius: BorderRadius.circular(8),
-                         border: Border.all(
-                           color: Colors.grey.withOpacity(0.2),
-                           width: 1,
-                         ),
-                       ),
-                       child: Icon(
-                         Icons.tune,
-                         size: 16,
-                         color: primaryColor,
-                       ),
-                     ),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.tune,
+                        size: 16,
+                        color: primaryColor,
+                      ),
+                    ),
                   ],
                 ),
+                // Show additional info if available
+                if (pricing?.gst != null || stock?.lowAlertStatus == 'true') ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const SizedBox(width: 50),
+                      if (pricing?.gst != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.orange[200]!),
+                          ),
+                          child: Text(
+                            'GST: ${pricing!.gst}%',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      if (stock?.lowAlertStatus == 'true') ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.red[200]!),
+                          ),
+                          child: Text(
+                            'Low Stock',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.red[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -593,29 +740,20 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
-                    children:
-                        [
-                              'A-Z',
-                              'Z-A',
-                              'Price: Low to High',
-                              'Price: High to Low',
-                            ]
-                            .map(
-                              (sort) => ChoiceChip(
-                                label: Text(sort),
-                                selected:
-                                    false, // This state variable is not used in the new code
-                                onSelected: (bool selected) {
-                                  // if (selected) {
-                                  //   setState(() {
-                                  //     _sortBy = sort;
-                                  //   });
-                                  //   this.setState(() {});
-                                  // }
-                                },
-                              ),
-                            )
-                            .toList(),
+                    children: [
+                      'A-Z',
+                      'Z-A',
+                      'Price: Low to High',
+                      'Price: High to Low',
+                    ].map(
+                      (sort) => ChoiceChip(
+                        label: Text(sort),
+                        selected: false,
+                        onSelected: (bool selected) {
+                          // TODO: Implement sorting
+                        },
+                      ),
+                    ).toList(),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -625,34 +763,24 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
-                    children:
-                        ['All Items', 'Low Stock', 'In Stock', 'Not in Stock']
-                            .map(
-                              (filter) => ChoiceChip(
-                                label: Text(filter),
-                                selected:
-                                    false, // This state variable is not used in the new code
-                                onSelected: (bool selected) {
-                                  // if (selected) {
-                                  //   setState(() {
-                                  //     _stockFilter = filter;
-                                  //   });
-                                  //   this.setState(() {});
-                                  // }
-                                },
-                              ),
-                            )
-                            .toList(),
+                    children: ['All Items', 'Low Stock', 'In Stock', 'Not in Stock']
+                        .map(
+                          (filter) => ChoiceChip(
+                            label: Text(filter),
+                            selected: false,
+                            onSelected: (bool selected) {
+                              // TODO: Implement filtering
+                            },
+                          ),
+                        )
+                        .toList(),
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(
                     title: const Text('In Online Store'),
-                    value:
-                        false, // This state variable is not used in the new code
+                    value: false,
                     onChanged: (bool value) {
-                      // setState(() {
-                      //   _isOnlineStore = value;
-                      // });
+                      // TODO: Implement online store filter
                       this.setState(() {});
                     },
                   ),
@@ -671,8 +799,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filteredItems = filteredItems.where((item) {
-        final name = item.name.toLowerCase();
-        final description = item.description.toLowerCase();
+        final name = item.itemName.toLowerCase();
+        final description = (item.details.itemDescription ?? '').toLowerCase();
         final query = _searchQuery.toLowerCase();
         return name.contains(query) || description.contains(query);
       }).toList();
@@ -680,48 +808,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
 
     // Apply category filter
     if (_selectedCategory != 'All Items') {
-      filteredItems =
-          filteredItems
-              .where((item) => item.category == _selectedCategory)
-              .toList();
+      // TODO: Implement category filtering based on item.details.itemCategoryId
+      // For now, we'll skip this filter since we need to map category IDs to names
     }
-
-    // Apply stock filter
-    // switch (_stockFilter) { // This state variable is not used in the new code
-    //   case 'Low Stock':
-    //     filteredItems = filteredItems.where((item) => item.isLowStock).toList();
-    //     break;
-    //   case 'In Stock':
-    //     filteredItems =
-    //         filteredItems.where((item) => item.stockQuantity > 0).toList();
-    //     break;
-    //   case 'Not in Stock':
-    //     filteredItems =
-    //         filteredItems.where((item) => item.stockQuantity <= 0).toList();
-    //     break;
-    // }
-
-    // Apply online store filter
-    // if (_isOnlineStore) { // This state variable is not used in the new code
-    //   // Add your online store filtering logic here
-    //   // For example: filteredItems = filteredItems.where((item) => item.isOnlineEnabled).toList();
-    // }
-
-    // Apply sorting
-    // switch (_sortBy) { // This state variable is not used in the new code
-    //   case 'A-Z':
-    //     filteredItems.sort((a, b) => a.name.compareTo(b.name));
-    //     break;
-    //   case 'Z-A':
-    //     filteredItems.sort((a, b) => b.name.compareTo(a.name));
-    //     break;
-    //   case 'Price: Low to High':
-    //     filteredItems.sort((a, b) => a.salesPrice.compareTo(b.salesPrice));
-    //     break;
-    //   case 'Price: High to Low':
-    //     filteredItems.sort((a, b) => b.salesPrice.compareTo(a.salesPrice));
-    //     break;
-    // }
 
     return filteredItems;
   }

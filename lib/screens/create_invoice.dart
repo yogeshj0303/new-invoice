@@ -5,7 +5,7 @@ import 'invoice_created_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   final List<Map<String, dynamic>>? cartItems;
-  final Map<String, int>? itemQuantities;
+  final Map<int, int>? itemQuantities;
   
   const CreateInvoiceScreen({
     super.key, 
@@ -1762,15 +1762,50 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void _editItem(Map<String, dynamic> item) {
     // Convert Map to Item object for EditBottomSheetContent
     final itemObject = Item(
-      id: item['id'] ?? '',
-      name: item['name'] ?? '',
-      description: item['description'] ?? '',
-      salesPrice: (item['price'] ?? 0).toDouble(),
-      purchasePrice: (item['purchasePrice'] ?? 0).toDouble(),
-      unit: item['unit'] ?? 'PCS',
-      stockQuantity: (item['stockQuantity'] ?? 0).toInt(),
-      category: item['category'] ?? '',
+      id: item['id'] ?? 0,
+      itemName: item['name'] ?? '',
+      userId: 1, // TODO: Get actual user ID from auth service
       createdAt: item['createdAt'] ?? DateTime.now(),
+      updatedAt: item['createdAt'] ?? DateTime.now(),
+      pricings: [
+        ItemPricing(
+          id: 0,
+          itemId: item['id'] ?? 0,
+          unit: item['unit'] ?? 'PCS',
+          salespriceAmount: (item['price'] ?? 0).toString(),
+          salespriceTax: 0,
+          purchesPriceAmount: (item['purchasePrice'] ?? 0).toString(),
+          purchesPriceTax: 0,
+          mrpPrice: null,
+          gst: null,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      ],
+      stocks: [
+        ItemStock(
+          id: 0,
+          itemId: item['id'] ?? 0,
+          openingStock: (item['stockQuantity'] ?? 0).toInt(),
+          asOfDate: null,
+          itemName: item['name'] ?? '',
+          lowAlertStatus: 'false',
+          lowAlertQuantity: null,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      ],
+      otherImages: [],
+      details: ItemDetails(
+        id: 0,
+        itemId: item['id'] ?? 0,
+        itemCategoryId: null, // TODO: Map category name to ID
+        itemDescription: item['description'] ?? '',
+        showOnlineStore: 'false',
+        userId: 1, // TODO: Get actual user ID from auth service
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
     );
 
     showModalBottomSheet(

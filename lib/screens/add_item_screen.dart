@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/item.dart';
+import '../services/api_service.dart';
+import '../constants/api_constants.dart';
 import '../widgets/edit_bottom_sheet_content.dart';
 import 'create_invoice.dart';
 
@@ -21,52 +23,50 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final List<String> _categories = ['All Categories', 'Food', 'Beverages', 'Snacks', 'Electronics'];
   
   // Track which items are in cart mode
-  final Set<String> _itemsInCart = {};
-  final Map<String, int> _itemQuantities = {};
+  final Set<int> _itemsInCart = {};
+  final Map<int, int> _itemQuantities = {};
   
-  // Sample items - in real app this would come from API/database
-  final List<Item> _items = [
-    Item(
-      id: '1',
-      name: 'VV',
-      description: 'VV Product',
-      salesPrice: 328.0,
-      purchasePrice: 300.0,
-      unit: 'PCS',
-      stockQuantity: -1,
-      category: 'Food',
-      createdAt: DateTime.now(),
-    ),
-    Item(
-      id: '2',
-      name: 'Kissan Jam',
-      description: 'Kissan Fruit Jam 500gm',
-      salesPrice: 150.0,
-      purchasePrice: 130.0,
-      unit: 'PCS',
-      stockQuantity: 25,
-      category: 'Food',
-      createdAt: DateTime.now(),
-    ),
-    Item(
-      id: '3',
-      name: 'Coca Cola',
-      description: 'Coca Cola 500ml',
-      salesPrice: 45.0,
-      purchasePrice: 35.0,
-      unit: 'PCS',
-      stockQuantity: 50,
-      category: 'Beverages',
-      createdAt: DateTime.now(),
-    ),
-  ];
-
+  List<Item> _items = [];
   List<Item> _filteredItems = [];
+  bool _isLoading = false;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _filteredItems = _items;
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      final result = await ApiService.getItems('1'); // TODO: Get actual user ID from auth service
+      
+      if (result['success'] == true) {
+        setState(() {
+          _items = result['items'] as List<Item>;
+          _filteredItems = _items;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _hasError = true;
+          _errorMessage = result[ApiConstants.messageKey] ?? 'Failed to load items';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Error: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -78,12 +78,25 @@ class _AddItemScreenState extends State<AddItemScreen> {
   void _filterItems() {
     setState(() {
       _filteredItems = _items.where((item) {
-        final matchesSearch = item.name.toLowerCase().contains(_searchController.text.toLowerCase()) ||
-                            item.id.toLowerCase().contains(_searchController.text.toLowerCase());
-        final matchesCategory = _selectedCategory == 'All Categories' || item.category == _selectedCategory;
+        final matchesSearch = item.itemName.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+                            item.id.toString().contains(_searchController.text.toLowerCase());
+        final matchesCategory = _selectedCategory == 'All Categories' || 
+                               (item.details.itemCategoryId != null && _getCategoryName(item.details.itemCategoryId!) == _selectedCategory);
         return matchesSearch && matchesCategory;
       }).toList();
     });
+  }
+
+  String _getCategoryName(int categoryId) {
+    final categoryMap = {
+      1: 'Food',
+      2: 'Beverages',
+      3: 'Snacks',
+      4: 'Dairy',
+      5: 'Fruits',
+      6: 'Vegetables',
+    };
+    return categoryMap[categoryId] ?? 'Other';
   }
 
   @override
@@ -101,13 +114,82 @@ class _AddItemScreenState extends State<AddItemScreen> {
               _buildHeader(),
               _buildSearchAndFilters(),
               Expanded(
-                child: _buildItemList(),
+                child: _isLoading
+                    ? _buildLoadingState()
+                    : _hasError
+                        ? _buildErrorState()
+                        : _buildItemList(),
               ),
               // Show bottom section only when items are in cart
               if (_itemsInCart.isNotEmpty) _buildBottomSection(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Loading items...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load items',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadItems,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
@@ -126,7 +208,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 color: primaryColor,
                 size: 18,
               ),
-              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -153,7 +235,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       style: const TextStyle(fontSize: 13, height: 1.2),
                       decoration: InputDecoration(
                         hintText: 'Search by name or code',
-                            focusedBorder: OutlineInputBorder(
+                        focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey[50]!),
                         ),
                         hintStyle: TextStyle(
@@ -320,17 +402,25 @@ class _AddItemScreenState extends State<AddItemScreen> {
       return _buildEmptyState();
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      itemCount: _filteredItems.length,
-      itemBuilder: (context, index) {
-        final item = _filteredItems[index];
-        return _buildItemCard(item);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadItems,
+      color: primaryColor,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
+          final item = _filteredItems[index];
+          return _buildItemCard(item);
+        },
+      ),
     );
   }
 
   Widget _buildItemCard(Item item) {
+    // Get the first pricing and stock info
+    final pricing = item.pricings.isNotEmpty ? item.pricings.first : null;
+    final stock = item.stocks.isNotEmpty ? item.stocks.first : null;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(10),
@@ -358,7 +448,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
             ),
             child: Center(
               child: Text(
-                item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
+                item.itemName.isNotEmpty ? item.itemName[0].toUpperCase() : '?',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -374,7 +464,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.name,
+                  item.itemName,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -385,7 +475,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 Row(
                   children: [
                     Text(
-                      '₹ ${item.salesPrice.toStringAsFixed(0)}/${item.unit}',
+                      '₹ ${pricing?.salespriceAmount ?? '0.00'}/${pricing?.unit ?? 'PCS'}',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -402,11 +492,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'STOCK: ${item.stockQuantity}${item.unit}',
+                  'STOCK: ${stock?.openingStock ?? 0}${pricing?.unit ?? 'PCS'}',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: item.stockQuantity < 0 ? Colors.red[600] : Colors.grey[600],
+                    color: (stock?.openingStock ?? 0) < 0 ? Colors.red[600] : Colors.grey[600],
                   ),
                 ),
               ],
@@ -467,15 +557,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
     });
   }
 
-
-
-  void _incrementQuantity(String itemId) {
+  void _incrementQuantity(int itemId) {
     setState(() {
       _itemQuantities[itemId] = (_itemQuantities[itemId] ?? 1) + 1;
     });
   }
 
-  void _decrementQuantity(String itemId) {
+  void _decrementQuantity(int itemId) {
     setState(() {
       final currentQty = _itemQuantities[itemId] ?? 1;
       if (currentQty > 1) {
@@ -664,7 +752,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
       ),
       child: Column(
         children: [
-   
           // Bottom section with additional details and generate bill button
           Container(
             padding: const EdgeInsets.all(16),
@@ -757,7 +844,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
     for (final itemId in _itemsInCart) {
       final item = _items.firstWhere((i) => i.id == itemId);
       final quantity = _itemQuantities[itemId] ?? 1;
-      total += item.salesPrice * quantity;
+      final pricing = item.pricings.isNotEmpty ? item.pricings.first : null;
+      final price = pricing?.salespriceAmount != null ? double.tryParse(pricing!.salespriceAmount!) ?? 0.0 : 0.0;
+      total += price * quantity;
     }
     return total;
   }
@@ -779,14 +868,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
     return _itemsInCart.map((itemId) {
       final item = _items.firstWhere((i) => i.id == itemId);
       final quantity = _itemQuantities[itemId] ?? 1;
+      final pricing = item.pricings.isNotEmpty ? item.pricings.first : null;
       return {
         'id': item.id,
-        'name': item.name,
-        'description': item.description,
-        'price': item.salesPrice,
+        'name': item.itemName,
+        'description': item.details.itemDescription ?? '',
+        'price': pricing?.salespriceAmount != null ? double.tryParse(pricing!.salespriceAmount!) ?? 0.0 : 0.0,
         'qty': quantity,
-        'unit': item.unit,
-        'category': item.category,
+        'unit': pricing?.unit ?? 'PCS',
+        'category': item.details.itemCategoryId != null ? _getCategoryName(item.details.itemCategoryId!) : 'Other',
       };
     }).toList();
   }

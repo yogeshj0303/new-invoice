@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/item.dart';
+import '../services/api_service.dart';
+import '../constants/api_constants.dart';
 
 class EditBottomSheetContent extends StatefulWidget {
   final Item item;
@@ -14,6 +16,7 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
   int selectedTabIndex = 0; // 0 for Price & Discount, 1 for Other Details
   String selectedTaxRate = 'GST @ 28%'; // Default tax rate
   String selectedDiscountType = 'Percentage'; // Default discount type
+  bool _isLoading = false; // Loading state for save operation
 
   // Controllers for editable fields
   late TextEditingController _priceController;
@@ -26,14 +29,15 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
   void initState() {
     super.initState();
     // Initialize controllers with item data
+    final pricing = widget.item.pricings.isNotEmpty ? widget.item.pricings.first : null;
     _priceController = TextEditingController(
-      text: widget.item.salesPrice.toString(),
+      text: pricing?.salespriceAmount ?? '0.0',
     );
     _quantityController = TextEditingController(text: '1.0');
-    _unitController = TextEditingController(text: widget.item.unit);
+    _unitController = TextEditingController(text: pricing?.unit ?? 'PCS');
     _discountController = TextEditingController(text: '0.0');
     _descriptionController = TextEditingController(
-      text: widget.item.description,
+      text: widget.item.details.itemDescription ?? '',
     );
   }
 
@@ -45,6 +49,115 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
     _discountController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  // Save changes to the API
+  Future<void> _saveChanges() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get the current pricing and stock info
+      final pricing = widget.item.pricings.isNotEmpty ? widget.item.pricings.first : null;
+      final stock = widget.item.stocks.isNotEmpty ? widget.item.stocks.first : null;
+      
+      // Prepare update data
+      final updateData = {
+        'itemId': widget.item.id,
+        'userId': widget.item.userId.toString(),
+        'itemName': widget.item.itemName,
+        'unit': _unitController.text.trim().isNotEmpty ? _unitController.text.trim() : null,
+        'salesPriceAmount': _priceController.text.trim().isNotEmpty ? _priceController.text.trim() : null,
+        'salesPriceTax': 0, // Default tax
+        'itemDescription': _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
+      };
+
+      // Add stock information if available
+      if (stock != null) {
+        updateData['openingStock'] = stock.openingStock;
+        updateData['lowAlertStatus'] = stock.lowAlertStatus;
+        updateData['lowAlertQuantity'] = stock.lowAlertQuantity;
+      }
+
+      // Add pricing information if available
+      if (pricing != null) {
+        updateData['mrpPrice'] = pricing.mrpPrice;
+        updateData['gst'] = pricing.gst;
+        updateData['purchasePriceAmount'] = pricing.purchesPriceAmount;
+      }
+
+      // Add category and other details if available
+      if (widget.item.details.itemCategoryId != null) {
+        updateData['itemCategoryId'] = widget.item.details.itemCategoryId;
+      }
+      if (widget.item.details.showOnlineStore != null) {
+        updateData['showOnlineStore'] = widget.item.details.showOnlineStore;
+      }
+
+      print('🔄 Updating item with data: $updateData');
+
+      final result = await ApiService.updateItem(
+        itemId: widget.item.id,
+        userId: widget.item.userId.toString(),
+        itemName: updateData['itemName'] as String?,
+        unit: updateData['unit'] as String?,
+        salesPriceAmount: updateData['salesPriceAmount'] as String?,
+        salesPriceTax: updateData['salesPriceTax'] as int,
+        purchasePriceAmount: updateData['purchasePriceAmount'] as String?,
+        mrpPrice: updateData['mrpPrice'] as String?,
+        gst: updateData['gst'] as String?,
+        openingStock: updateData['openingStock'] as int?,
+        lowAlertStatus: updateData['lowAlertStatus'] as String?,
+        lowAlertQuantity: updateData['lowAlertQuantity'] as int?,
+        itemCategoryId: updateData['itemCategoryId'] as int?,
+        itemDescription: updateData['itemDescription'] as String?,
+        showOnlineStore: updateData['showOnlineStore'] as String?,
+      );
+
+      if (result['success'] == true) {
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result[ApiConstants.messageKey] ?? 'Item updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        
+        // Close the bottom sheet and return the updated item
+        Navigator.of(context).pop(result['item']);
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result[ApiConstants.messageKey] ?? 'Failed to update item'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error updating item: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   final Map<String, double> taxRateValues = {
@@ -139,7 +252,7 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.item.name,
+                          widget.item.itemName,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -250,34 +363,38 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Save the edited values
-                        // Here you would typically save to your data source
-                        // For now, we'll just close the bottom sheet
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E3085),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        elevation: 0,
-                        shadowColor: const Color(0xFF2E3085).withOpacity(0.3),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: const Text(
-                        'Save Changes',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+                                     Expanded(
+                     flex: 2,
+                     child: ElevatedButton(
+                       onPressed: _isLoading ? null : _saveChanges,
+                       style: ElevatedButton.styleFrom(
+                         backgroundColor: const Color(0xFF2E3085),
+                         foregroundColor: Colors.white,
+                         padding: const EdgeInsets.symmetric(vertical: 10),
+                         elevation: 0,
+                         shadowColor: const Color(0xFF2E3085).withOpacity(0.3),
+                         shape: RoundedRectangleBorder(
+                           borderRadius: BorderRadius.circular(6),
+                         ),
+                       ),
+                       child: _isLoading
+                           ? const SizedBox(
+                               width: 16,
+                               height: 16,
+                               child: CircularProgressIndicator(
+                                 strokeWidth: 2,
+                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                               ),
+                             )
+                           : const Text(
+                               'Save Changes',
+                               style: TextStyle(
+                                 fontSize: 12,
+                                 fontWeight: FontWeight.w600,
+                               ),
+                             ),
+                     ),
+                   ),
                 ],
               ),
             ),

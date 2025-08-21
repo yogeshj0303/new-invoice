@@ -7,6 +7,9 @@ class ApiConstants {
   static const String verifyOTP = '/api/verify-otp';
   static const String updateUserInfo = '/api/update-user-info';
   static const String customers = '/api/customers';
+  static const String items = '/api/items';
+  static const String userItems = '/api/items/user';
+  static const String updateItem = '/api/items/update';
   
   // API Headers
   static const Map<String, String> defaultHeaders = {

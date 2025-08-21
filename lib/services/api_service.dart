@@ -4,6 +4,7 @@ import '../constants/api_constants.dart';
 import '../models/business_profile.dart';
 import '../models/customer.dart';
 import 'dart:io'; // Added for File
+import '../models/item.dart'; // Added for Item
 
 class ApiService {
   // Send OTP API
@@ -630,6 +631,473 @@ class ApiService {
         ApiConstants.messageKey: 'Network error: ${e.toString()}',
         ApiConstants.errorKey: 'Exception',
         'customers': [],
+      };
+    }
+  }
+
+  // Get Item Categories API
+  static Future<Map<String, dynamic>> getItemCategories() async {
+    try {
+      final url = '${ApiConstants.baseURL}/api/item-categories';
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('🔍 [DEBUG] Categories API Raw Response: ${response.body}');
+        print('🔍 [DEBUG] Categories API Parsed Data: $data');
+        return data;
+      } else {
+        print('❌ [DEBUG] Categories API Error Status: ${response.statusCode}');
+        print('❌ [DEBUG] Categories API Error Body: ${response.body}');
+        return {
+          'success': false,
+          'message': 'Failed to load categories. Status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Create Item Category API
+  static Future<Map<String, dynamic>> createItemCategory(String categoryName) async {
+    try {
+      final url = '${ApiConstants.baseURL}/api/item-categories';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'user_id': '1', // TODO: Get actual user ID from auth service
+          'item_category_name': categoryName,
+        }),
+      );
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        print('✅ [DEBUG] Category Created Successfully: ${response.body}');
+        return data;
+      } else {
+        print('❌ [DEBUG] Create Category Error Status: ${response.statusCode}');
+        print('❌ [DEBUG] Create Category Error Body: ${response.body}');
+        return {
+          'success': false,
+          'message': 'Failed to create category. Status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      print('❌ [DEBUG] Create Category Exception: $e');
+      return {
+        'success': false,
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Create Item API
+  static Future<Map<String, dynamic>> createItem({
+    required String userId,
+    required String itemName,
+    String? unit,
+    String? salesPriceAmount,
+    int salesPriceTax = 0,
+    String? purchasePriceAmount,
+    int purchasePriceTax = 0,
+    String? mrpPrice,
+    String? gst,
+    int? openingStock,
+    String? asOfDate,
+    String? lowAlertStatus,
+    int? lowAlertQuantity,
+    int? itemCategoryId,
+    String? itemDescription,
+    String? showOnlineStore,
+    List<String>? imagePaths,
+  }) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.items}';
+      
+      // Build form data fields matching the API structure
+      final Map<String, String> formFields = {
+        'user_id': userId,
+        'item_name': itemName,
+      };
+
+      // Add optional fields
+      if (itemCategoryId != null) {
+        formFields['item_category_id'] = itemCategoryId.toString();
+      }
+      if (itemDescription != null && itemDescription.isNotEmpty) {
+        formFields['item_description'] = itemDescription;
+      }
+      if (showOnlineStore != null && showOnlineStore.isNotEmpty) {
+        formFields['show_online_store'] = showOnlineStore;
+      }
+
+      // Add pricing data as nested array
+      if (unit != null && unit.isNotEmpty) {
+        formFields['pricings[0][unit]'] = unit;
+      }
+      if (salesPriceAmount != null && salesPriceAmount.isNotEmpty) {
+        formFields['pricings[0][salesprice_amount]'] = salesPriceAmount;
+      }
+      if (salesPriceTax >= 0) {
+        formFields['pricings[0][salesprice_tax]'] = salesPriceTax.toString();
+      }
+      if (purchasePriceAmount != null && purchasePriceAmount.isNotEmpty) {
+        formFields['pricings[0][purches_price_amount]'] = purchasePriceAmount;
+      }
+      if (purchasePriceTax >= 0) {
+        formFields['pricings[0][purches_price_tax]'] = purchasePriceTax.toString();
+      }
+      if (mrpPrice != null && mrpPrice.isNotEmpty) {
+        formFields['pricings[0][mrp_price]'] = mrpPrice;
+      }
+      if (gst != null && gst.isNotEmpty) {
+        formFields['pricings[0][gst]'] = gst;
+      }
+
+      // Add stock data as nested array
+      if (openingStock != null) {
+        formFields['stocks[0][opening_stock]'] = openingStock.toString();
+      }
+      if (asOfDate != null && asOfDate.isNotEmpty) {
+        formFields['stocks[0][as_of_date]'] = asOfDate;
+      }
+      if (lowAlertStatus != null && lowAlertStatus.isNotEmpty) {
+        formFields['stocks[0][low_alert_status]'] = lowAlertStatus;
+      }
+      if (lowAlertQuantity != null) {
+        formFields['stocks[0][low_alert_quantity]'] = lowAlertQuantity.toString();
+      }
+
+      print('🔍 [DEBUG] Create Item Request:');
+      print('URL: $url');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+      print('Form Fields: $formFields');
+
+      // Create multipart request for form data
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      
+      // Add headers
+      request.headers.addAll(ApiConstants.defaultHeaders);
+      
+      // Add form fields
+      request.fields.addAll(formFields);
+      
+      // Add images if they exist
+      if (imagePaths != null && imagePaths.isNotEmpty) {
+        for (int i = 0; i < imagePaths.length; i++) {
+          final imagePath = imagePaths[i];
+          if (imagePath.startsWith('/') || imagePath.contains('\\')) {
+            final file = File(imagePath);
+            if (await file.exists()) {
+              final stream = http.ByteStream(file.openRead());
+              final length = await file.length();
+              final multipartFile = http.MultipartFile(
+                'other_images[$i]',
+                stream,
+                length,
+                filename: file.path.split('/').last,
+              );
+              request.files.add(multipartFile);
+            }
+          }
+        }
+      }
+
+      print('📡 [DEBUG] Sending multipart request...');
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      
+      print('📡 [DEBUG] Create Item Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: $responseBody');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(responseBody);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['message'] != null && data['message'].toString().contains('successfully')) {
+          // Parse the item data from response
+          Item? item;
+          try {
+            if (data['data'] != null) {
+              item = Item.fromJson(data['data']);
+              print('✅ [DEBUG] Successfully parsed item from response');
+            } else {
+              print('⚠️ [DEBUG] No data field in response, item will be null');
+            }
+          } catch (parseError) {
+            print('⚠️ [DEBUG] Error parsing item from response: $parseError');
+            item = null;
+          }
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'Item created successfully',
+            'item': item,
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Failed to create item',
+            'item': null,
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(responseBody);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to create item';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+          'item': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+        'item': null,
+      };
+    }
+  }
+
+  // Get Items List API
+  static Future<Map<String, dynamic>> getItems(String userId) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.userItems}?user_id=$userId';
+      
+      print('🔍 [DEBUG] Get Items Request:');
+      print('URL: $url');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Get Items Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['data'] != null && data['data'] is List) {
+          // Parse the items list from response
+          List<Item> items = [];
+          try {
+            items = (data['data'] as List)
+                .map((itemJson) => Item.fromJson(itemJson))
+                .toList();
+            print('✅ [DEBUG] Successfully parsed ${items.length} items from response');
+          } catch (parseError) {
+            print('⚠️ [DEBUG] Error parsing items from response: $parseError');
+            items = [];
+          }
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'Items loaded successfully',
+            'items': items,
+          };
+        } else {
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'No items found',
+            'items': [],
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to load items';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+          'items': [],
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+        'items': [],
+      };
+    }
+  }
+
+  // Update Item API
+  static Future<Map<String, dynamic>> updateItem({
+    required int itemId,
+    required String userId,
+    String? itemName,
+    String? unit,
+    String? salesPriceAmount,
+    int salesPriceTax = 0,
+    String? purchasePriceAmount,
+    int purchasePriceTax = 0,
+    String? mrpPrice,
+    String? gst,
+    int? openingStock,
+    String? asOfDate,
+    String? lowAlertStatus,
+    int? lowAlertQuantity,
+    int? itemCategoryId,
+    String? itemDescription,
+    String? showOnlineStore,
+    List<String>? imagePaths,
+  }) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.updateItem}';
+      
+      print('🔄 [DEBUG] Update Item Request:');
+      print('URL: $url');
+      print('Item ID: $itemId');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+      
+      // Prepare the request body
+      final Map<String, dynamic> requestBody = {
+        'item_id': itemId,
+        'user_id': userId,
+      };
+      
+      // Add optional fields only if they are not null
+      if (itemName != null) requestBody['item_name'] = itemName;
+      if (unit != null) requestBody['unit'] = unit;
+      if (salesPriceAmount != null) requestBody['salesprice_amount'] = salesPriceAmount;
+      if (salesPriceTax != null) requestBody['salesprice_tax'] = salesPriceTax;
+      if (purchasePriceAmount != null) requestBody['purches_price_amount'] = purchasePriceAmount;
+      if (purchasePriceTax != null) requestBody['purches_price_tax'] = purchasePriceTax;
+      if (mrpPrice != null) requestBody['mrp_price'] = mrpPrice;
+      if (gst != null) requestBody['gst'] = gst;
+      if (openingStock != null) requestBody['opening_stock'] = openingStock;
+      if (asOfDate != null) requestBody['as_of_date'] = asOfDate;
+      if (lowAlertStatus != null) requestBody['low_alert_status'] = lowAlertStatus;
+      if (lowAlertQuantity != null) requestBody['low_alert_quantity'] = lowAlertQuantity;
+      if (itemCategoryId != null) requestBody['item_category_id'] = itemCategoryId;
+      if (itemDescription != null) requestBody['item_description'] = itemDescription;
+      if (showOnlineStore != null) requestBody['show_online_store'] = showOnlineStore;
+      
+      print('📤 [DEBUG] Request Body: $requestBody');
+      print('📤 [DEBUG] JSON Body: ${jsonEncode(requestBody)}');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+        body: jsonEncode(requestBody),
+      );
+      
+      print('📥 [DEBUG] Update Item Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['data'] != null) {
+          final updatedItem = Item.fromJson(data['data']);
+          
+          print('✅ [DEBUG] Item updated successfully');
+          return {
+            'success': true,
+            'item': updatedItem,
+            ApiConstants.messageKey: data['message'] ?? 'Item updated successfully',
+          };
+        } else {
+          print('⚠️ [DEBUG] No data field in response');
+          return {
+            'success': false,
+            'item': null,
+            ApiConstants.messageKey: data['message'] ?? 'Item updated but no data returned',
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to update item';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          'item': null,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        'item': null,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
       };
     }
   }
