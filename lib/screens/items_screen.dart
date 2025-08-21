@@ -37,8 +37,14 @@ class _ItemsScreenState extends State<ItemsScreen> {
   List<Map<String, dynamic>> _categories = [];
   bool _isLoadingCategories = false;
   
-  // Get unique categories from items
-  List<String> get _availableCategories {
+
+  
+  // Get the list of available category names
+  List<String> get _availableCategoryNames {
+    if (_isLoadingCategories) {
+      return ['Loading...'];
+    }
+    
     final categories = <String>['All Items'];
     final seenNames = <String>{};
     
@@ -57,7 +63,31 @@ class _ItemsScreenState extends State<ItemsScreen> {
         categories.add(uniqueName);
       }
     }
+    
+    // Debug print to see what categories are being generated
+    print('Available categories: $categories');
+    
     return categories;
+  }
+  
+  // Get unique category values for dropdown (ensuring no duplicates)
+  List<DropdownMenuItem<String>> get _categoryDropdownItems {
+    return _availableCategoryNames.map<DropdownMenuItem<String>>((String value) {
+      return DropdownMenuItem<String>(
+        value: value,
+        child: Row(
+          children: [
+            Icon(
+              value == 'All Items' ? Icons.category_outlined : Icons.category,
+              size: 14,
+              color: value == 'All Items' ? Colors.grey[400] : primaryColor,
+            ),
+            const SizedBox(width: 6),
+            Text(value),
+          ],
+        ),
+      );
+    }).toList();
   }
 
   // Check if any filters are active
@@ -133,28 +163,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
           _categories = List<Map<String, dynamic>>.from(response['data']);
         });
         
-        // Check if the currently selected category still exists
-        if (_selectedCategory != 'All Items') {
-          final categoryExists = _categories.any(
-            (cat) {
-              final catName = cat['item_category_name'] as String?;
-              if (catName == null) return false;
-              
-              // Check if it's an exact match
-              if (catName == _selectedCategory) return true;
-              
-              // Check if it's a name with ID suffix (e.g., "new (1)" matches "new")
-              if (_selectedCategory.startsWith('$catName (')) return true;
-              
-              return false;
-            }
-          );
-          if (!categoryExists) {
-            setState(() {
-              _selectedCategory = 'All Items';
-            });
-          }
-        }
+        // Always reset to 'All Items' when categories are loaded to ensure consistency
+        setState(() {
+          _selectedCategory = 'All Items';
+        });
       } else {
         setState(() {
           _categories = [];
@@ -172,6 +184,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
       });
     }
   }
+  
+
 
   // Refresh both items and categories
   Future<void> _refreshAll() async {
@@ -542,59 +556,60 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         ? primaryColor.withOpacity(0.05) 
                         : Colors.white,
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedCategory,
-                      icon: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: _selectedCategory != 'All Items' ? primaryColor : Colors.grey[600],
-                        size: 18,
-                      ),
-                      iconSize: 18,
-                      elevation: 3,
-                      isExpanded: true,
-                      style: TextStyle(
-                        color: _selectedCategory != 'All Items' ? primaryColor : Colors.grey[700],
-                        fontSize: 12,
-                        fontWeight: _selectedCategory != 'All Items' ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedCategory = newValue!;
-                        });
-                      },
-                      items: _isLoadingCategories 
-                        ? ['Loading...'].map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Row(
-                                children: [
-                                  Icon(Icons.category_outlined, size: 14, color: Colors.grey[400]),
-                                  const SizedBox(width: 6),
-                                  Text(value),
-                                ],
+                  child: _isLoadingCategories 
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[400]!),
                               ),
-                            );
-                          }).toList()
-                        : _availableCategories.map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    value == 'All Items' ? Icons.category_outlined : Icons.category,
-                                    size: 14,
-                                    color: value == 'All Items' ? Colors.grey[400] : primaryColor,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(value),
-                                ],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Loading...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
                               ),
-                            );
-                          }).toList(),
-                    ),
-                  ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                                                     value: _isLoadingCategories || _categories.isEmpty ? null : _getSafeDropdownValue(),
+                          icon: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: _selectedCategory != 'All Items' ? primaryColor : Colors.grey[600],
+                            size: 18,
+                          ),
+                          iconSize: 18,
+                          elevation: 3,
+                          isExpanded: true,
+                          style: TextStyle(
+                            color: _selectedCategory != 'All Items' ? primaryColor : Colors.grey[700],
+                            fontSize: 12,
+                            fontWeight: _selectedCategory != 'All Items' ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          onChanged: _isLoadingCategories || _categories.isEmpty ? null : (String? newValue) {
+                            if (newValue != null && _availableCategoryNames.contains(newValue)) {
+                              print('Category selected: $newValue'); // Debug print
+                              setState(() {
+                                _selectedCategory = newValue;
+                              });
+                              print('Selected category updated to: $_selectedCategory'); // Debug print
+                            }
+                          },
+                                                     items: _getSafeDropdownItems(),
+                        ),
+                      ),
                 ),
               ),
               
@@ -1492,31 +1507,14 @@ class _ItemsScreenState extends State<ItemsScreen> {
 
     // Apply category filter
     if (_selectedCategory != 'All Items') {
-      // Find the category ID from the selected category name
-      // Handle both original names and names with ID suffixes
-      final selectedCategory = _categories.firstWhere(
-        (cat) {
-          final catName = cat['item_category_name'] as String?;
-          if (catName == null) return false;
-          
-          // Check if it's an exact match
-          if (catName == _selectedCategory) return true;
-          
-          // Check if it's a name with ID suffix (e.g., "new (1)" matches "new")
-          if (_selectedCategory.startsWith('$catName (')) return true;
-          
-          return false;
-        },
-        orElse: () => <String, dynamic>{},
-      );
-      
-      if (selectedCategory.isNotEmpty) {
-        final categoryId = selectedCategory['id'] as int?;
-        if (categoryId != null) {
-          filteredItems = filteredItems.where((item) {
-            return item.details.itemCategoryId == categoryId;
-          }).toList();
-        }
+      print('Filtering by category: $_selectedCategory'); // Debug print
+      final categoryId = _getCategoryIdFromName(_selectedCategory);
+      print('Category ID found: $categoryId'); // Debug print
+      if (categoryId != null) {
+        filteredItems = filteredItems.where((item) {
+          return item.details.itemCategoryId == categoryId;
+        }).toList();
+        print('Items after category filter: ${filteredItems.length}'); // Debug print
       }
     }
 
@@ -1595,6 +1593,77 @@ class _ItemsScreenState extends State<ItemsScreen> {
     if (_selectedSortBy != 'A-Z') activeFilters.add(_selectedSortBy);
     if (_searchQuery.isNotEmpty) activeFilters.add('Search: "${_searchQuery}"');
     return activeFilters.join(', ');
+  }
+  
+  // Get safe dropdown items to prevent errors
+  List<DropdownMenuItem<String>> _getSafeDropdownItems() {
+    if (_isLoadingCategories) {
+      return [];
+    }
+    
+    // Ensure we have valid categories before generating dropdown items
+    if (_categories.isEmpty) {
+      return [];
+    }
+    
+    return _categoryDropdownItems;
+  }
+
+  // Get safe dropdown value to prevent errors
+  String _getSafeDropdownValue() {
+    if (_isLoadingCategories) {
+      return 'Loading...';
+    }
+    
+    // Ensure the selected category is always valid
+    if (_availableCategoryNames.contains(_selectedCategory)) {
+      return _selectedCategory;
+    }
+    
+    // If the selected category is not valid, reset to 'All Items'
+    if (_selectedCategory != 'All Items') {
+      print('Selected category $_selectedCategory not found in available categories, resetting to All Items');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedCategory = 'All Items';
+        });
+      });
+    }
+    
+    return 'All Items';
+  }
+
+  // Get category ID from selected category name
+  int? _getCategoryIdFromName(String categoryName) {
+    if (categoryName == 'All Items') return null;
+    
+    print('Looking for category: $categoryName'); // Debug print
+    print('Available categories from API: ${_categories.map((e) => e['item_category_name']).toList()}'); // Debug print
+    
+    // Find the category ID from the selected category name
+    // Handle both original names and names with ID suffixes
+    final selectedCategory = _categories.firstWhere(
+      (cat) {
+        final catName = cat['item_category_name'] as String?;
+        if (catName == null) return false;
+        
+        // Check if it's an exact match
+        if (catName == categoryName) return true;
+        
+        // Check if it's a name with ID suffix (e.g., "new (1)" matches "new")
+        if (categoryName.startsWith('$catName (')) return true;
+        
+        return false;
+      },
+      orElse: () => <String, dynamic>{},
+    );
+    
+    print('Selected category found: $selectedCategory'); // Debug print
+    
+    if (selectedCategory.isNotEmpty) {
+      return selectedCategory['id'] as int?;
+    }
+    return null;
   }
 
   @override
