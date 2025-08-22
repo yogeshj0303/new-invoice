@@ -211,7 +211,7 @@ class _RestaurantInvoiceAppState extends State<RestaurantInvoiceApp> {
         '/home': (context) => HomeDashboard(onThemeToggle: _toggleTheme),
         '/sales-report': (context) => SalesReportScreen(),
         '/create-invoice': (context) => const CreateInvoiceScreen(),
-        '/invoice-preview': (context) => InvoicePreviewScreen(),
+        '/invoice-preview': (context) => const CreateInvoiceScreen(),
         '/invoice-settings': (context) => InvoiceSettingsScreen(),
         '/invite-earn': (context) => const InviteEarnScreen(),
         '/subscription': (context) => const SubscriptionScreen(),

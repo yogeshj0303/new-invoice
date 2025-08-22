@@ -52,6 +52,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     _loadCategories();
     // Ensure initial GST value is valid
     _selectedGst = 'None';
+    // Set default unit value to PCS
+    _unitController.text = 'PCS';
   }
 
   @override
@@ -219,6 +221,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                     controller: _unitController,
                     hintText: 'PCS',
                     icon: Icons.straighten,
+                    enabled: false,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -341,7 +344,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      _unitController.text.isNotEmpty ? _unitController.text : 'PCS',
+                      'PCS',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF666666),
@@ -1114,6 +1117,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     TextInputType? keyboardType,
     int? maxLines,
     IconData? icon,
+    bool enabled = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1183,6 +1187,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             controller: controller,
             keyboardType: keyboardType,
             maxLines: maxLines,
+            enabled: enabled,
             style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
               hintText: hintText,
@@ -1369,7 +1374,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         final result = await ApiService.createItem(
           userId: '1', // TODO: Get actual user ID from auth service
           itemName: _nameController.text.trim(),
-          unit: _unitController.text.trim().isNotEmpty ? _unitController.text.trim() : null,
+          unit: 'PCS',
           salesPriceAmount: _salesPriceController.text.trim().isNotEmpty ? _salesPriceController.text.trim() : null,
           salesPriceTax: _withTax ? 1 : 0,
           purchasePriceAmount: _purchasePriceController.text.trim().isNotEmpty ? _purchasePriceController.text.trim() : null,
