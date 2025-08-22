@@ -135,7 +135,7 @@ class InvoiceTemplate extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Mobile: +1 (555) 123-4567',
+                        'Mobile: +91 9826000000',
                         style: TextStyle(
                           fontSize: 7,
                           color: Colors.grey[700],

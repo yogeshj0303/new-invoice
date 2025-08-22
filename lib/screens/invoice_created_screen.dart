@@ -483,7 +483,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         ),
                         pw.Text('Block no 9, South Avenue, Shahpura'),
                         pw.Text('Bhopal, Madhya Pradesh 462039, India'),
-                        pw.Text('Mobile: +1 (555) 123-4567'),
+                        pw.Text('Mobile: +91 9826000000'),
                       ],
                     ),
                     pw.Column(
@@ -868,7 +868,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                           ),
                           pw.Text('Block no 9, South Avenue, Shahpura'),
                           pw.Text('Bhopal, Madhya Pradesh 462039, India'),
-                          pw.Text('Mobile: +1 (555) 123-4567'),
+                          pw.Text('Mobile: +91 9826000000'),
                         ],
                       ),
                       pw.Column(

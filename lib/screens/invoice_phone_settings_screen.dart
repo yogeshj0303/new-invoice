@@ -9,12 +9,11 @@ class InvoicePhoneSettingsScreen extends StatefulWidget {
 }
 
 class _InvoicePhoneSettingsScreenState extends State<InvoicePhoneSettingsScreen> {
-  String selectedPhoneNumber = '+1 (555) 123-4567';
+  String selectedPhoneNumber = '+91 9826000000';
   final TextEditingController _phoneController = TextEditingController();
   
   // Sample phone numbers for quick selection
   final List<String> samplePhoneNumbers = [
-    '+1 (555) 123-4567',
     '+91 98765 43210',
     '+44 20 7946 0958',
     '+61 2 9876 5432',
