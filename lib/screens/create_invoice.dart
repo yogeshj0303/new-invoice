@@ -176,8 +176,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     double totalTax = 0;
     for (var item in items) {
       final itemTotal = item['qty'] * item['price'];
-      final itemTax = itemTotal * (item['taxRate'] ?? 0) / 100;
+      // Use GST value if available, otherwise fallback to taxRate
+      final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+      final itemTax = itemTotal * gstValue / 100;
       totalTax += itemTax;
+      
+      // Debug logging for GST values
+      print('🔍 [DEBUG] Item: ${item['name']}, GST: ${item['gst']}, GST Value: $gstValue, Tax: $itemTax');
     }
     return totalTax;
   }
@@ -199,6 +204,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           'price': double.tryParse(priceController.text) ?? 0,
           'unit': 'BOX', // Default unit
           'taxRate': 12.0, // Default tax rate
+          'gst': '12.0', // Default GST value
         });
         itemController.clear();
         qtyController.clear();
@@ -594,7 +600,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                            final index = entry.key;
                            final item = entry.value;
                            final itemTotal = item['qty'] * item['price'];
-                           final itemTax = itemTotal * (item['taxRate'] ?? 0) / 100;
+                           // Use GST value if available, otherwise fallback to taxRate
+                           final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+                           final itemTax = itemTotal * gstValue / 100;
                            final itemTotalWithTax = itemTotal + itemTax;
                            
                            return Container(
@@ -678,7 +686,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                    ),
                                  ),
                                  Text(
-                                   '${item['taxRate']}% = ${itemTax.toStringAsFixed(2)}',
+                                   '${gstValue > 0 ? 'GST ${gstValue.toStringAsFixed(2)}%' : 'No Tax'} = ${itemTax.toStringAsFixed(2)}',
                                    style: theme.textTheme.bodyMedium?.copyWith(
                                      color: Colors.black87,
                                      fontSize: 13,
@@ -1817,6 +1825,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       }
 
   void _editItem(Map<String, dynamic> item) {
+    // Debug logging for GST values
+    print('🔍 [DEBUG] Editing item: ${item['name']}, GST: ${item['gst']}');
+    
     // Convert Map to Item object for EditBottomSheetContent
     final itemObject = Item(
       id: item['id'] ?? 0,
@@ -1833,8 +1844,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           salespriceTax: 0,
           purchesPriceAmount: (item['purchasePrice'] ?? 0).toString(),
           purchesPriceTax: 0,
-          mrpPrice: null,
-          gst: null,
+          mrpPrice: item['mrpPrice'] != null ? item['mrpPrice'].toString() : null,
+          gst: item['gst'], // Use actual GST value from cart item
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),

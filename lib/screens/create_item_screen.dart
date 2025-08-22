@@ -1341,6 +1341,8 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       try {
         // Extract GST percentage from selected value
         String? gstValue;
+        print('🔍 [DEBUG] Selected GST: $_selectedGst'); // Debug log
+        
         if (_selectedGst != 'None' && _selectedGst != 'Tax Exempted') {
           // Handle different GST formats
           if (_selectedGst.startsWith('GST @ ')) {
@@ -1348,12 +1350,18 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             final gstMatch = RegExp(r'GST @ ([\d.]+)%').firstMatch(_selectedGst);
             if (gstMatch != null) {
               gstValue = gstMatch.group(1);
+              print('🔍 [DEBUG] Extracted GST value: $gstValue'); // Debug log
             }
           } else {
             // Handle legacy format (e.g., "5%")
             gstValue = _selectedGst.replaceAll('%', '');
+            print('🔍 [DEBUG] Legacy GST format, extracted: $gstValue'); // Debug log
           }
+        } else {
+          print('🔍 [DEBUG] GST is None or Tax Exempted, setting to null'); // Debug log
         }
+        
+        print('🔍 [DEBUG] Final GST value to be sent: $gstValue'); // Debug log
 
         // Extract category ID from selected category
         int? categoryId;

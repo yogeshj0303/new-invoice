@@ -1105,7 +1105,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
       final item = _items.firstWhere((i) => i.id == itemId);
       final quantity = _itemQuantities[itemId] ?? 1;
       final pricing = item.pricings.isNotEmpty ? item.pricings.first : null;
-      return {
+      
+      final cartItem = {
         'id': item.id,
         'name': item.itemName,
         'description': item.details.itemDescription ?? '',
@@ -1113,7 +1114,17 @@ class _AddItemScreenState extends State<AddItemScreen> {
         'qty': quantity,
         'unit': pricing?.unit ?? 'PCS',
         'category': item.details.itemCategoryId != null ? _getCategoryName(item.details.itemCategoryId!) : 'Other',
+        'gst': pricing?.gst, // Include GST value from pricing
+        'purchasePrice': pricing?.purchesPriceAmount != null ? double.tryParse(pricing!.purchesPriceAmount!) ?? 0.0 : 0.0,
+        'mrpPrice': pricing?.mrpPrice != null ? double.tryParse(pricing!.mrpPrice!) ?? 0.0 : 0.0,
+        'stockQuantity': item.stocks.isNotEmpty ? item.stocks.first.openingStock : 0,
+        'createdAt': item.createdAt,
       };
+      
+      // Debug logging for GST values
+      print('🔍 [DEBUG] Cart item: ${cartItem['name']}, GST: ${cartItem['gst']}');
+      
+      return cartItem;
     }).toList();
   }
 }
