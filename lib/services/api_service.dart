@@ -1696,7 +1696,6 @@ class ApiService {
   static Future<Map<String, dynamic>> getTransactions([int? userId]) async {
     try {
       // Use provided userId or get current user ID
-      userId = 1;
       final currentUserId = userId ?? await getCurrentUserId();
       if (currentUserId == null) {
         return {
