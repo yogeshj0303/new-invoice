@@ -1274,9 +1274,9 @@ class _InvoiceTransactionItem extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12),
           // Action buttons - only show if transaction is not paid
           if (status.toLowerCase() != 'paid') ...[
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -1405,7 +1405,7 @@ class _TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1474,9 +1474,9 @@ class _TransactionItem extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12),
           // Action buttons - only show if transaction is not paid
           if (transaction.status.toLowerCase() != 'paid') ...[
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
