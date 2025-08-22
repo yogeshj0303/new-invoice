@@ -24,8 +24,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController stateController = TextEditingController();
-  final TextEditingController districtController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
   
   final FocusNode nameFocusNode = FocusNode();
@@ -72,11 +70,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
     ));
     
     _animationController.forward();
-    
-    // Pre-fill phone number
-    if (widget.phoneNumber.startsWith('+91')) {
-      // Phone is already in the correct format
-    }
   }
 
   @override
@@ -84,8 +77,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
     _animationController.dispose();
     nameController.dispose();
     emailController.dispose();
-    stateController.dispose();
-    districtController.dispose();
     addressController.dispose();
     nameFocusNode.dispose();
     emailFocusNode.dispose();
@@ -403,10 +394,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.grey[600],
                                 ),
-                                                              ),
-                                SizedBox(height: 12),
-                                
-                                // Phone Number Display (Read-only)
+                              ),
+                              SizedBox(height: 20),
+                              
+                              // Phone Number Display (Read-only)
                               // Container(
                               //   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               //   decoration: BoxDecoration(
@@ -428,301 +419,299 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
                               //     ],
                               //   ),
                               // ),
-                              // SizedBox(height: 16),
+                              // SizedBox(height: 20),
                               
-                                                             // Full Name Field
-                               Container(
-                                 height: 48,
-                                 child: TextFormField(
-                                   controller: nameController,
-                                   focusNode: nameFocusNode,
-                                   keyboardType: TextInputType.name,
-                                   textInputAction: TextInputAction.next,
-                                   inputFormatters: [
-                                     FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                                   ],
-                                   validator: (value) {
-                                     if (value == null || value.isEmpty) {
-                                       return 'Please enter your full name';
-                                     }
-                                     if (value.trim().length < 2) {
-                                       return 'Name must be at least 2 characters';
-                                     }
-                                     return null;
-                                   },
-                                   decoration: InputDecoration(
-                                     labelText: 'Full Name',
-                                     hintText: 'Enter your full name',
-                                     hintStyle: TextStyle(
-                                       fontSize: 14,
-                                       color: Colors.grey[500],
-                                     ),
-                                     prefixIcon: Icon(
-                                       Icons.person_outline,
-                                       color: primaryColor,
-                                       size: 20,
-                                     ),
-                                     border: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     enabledBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     focusedBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: primaryColor, width: 2),
-                                     ),
-                                     errorBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.red[300]!),
-                                     ),
-                                     filled: true,
-                                     fillColor: Colors.grey[50],
-                                     contentPadding: EdgeInsets.symmetric(
-                                       horizontal: 14,
-                                       vertical: 12,
-                                     ),
-                                   ),
-                                 ),
-                               ),
+                              // Full Name Field
+                              TextFormField(
+                                controller: nameController,
+                                focusNode: nameFocusNode,
+                                keyboardType: TextInputType.name,
+                                textInputAction: TextInputAction.next,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                                ],
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter your full name';
+                                  }
+                                  if (value.trim().length < 2) {
+                                    return 'Name must be at least 2 characters';
+                                  }
+                                  if (value.trim().length > 50) {
+                                    return 'Name must be less than 50 characters';
+                                  }
+                                  return null;
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'Full Name *',
+                                  hintText: 'Enter your full name',
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.person_outline,
+                                    color: primaryColor,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: primaryColor, width: 2),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.red[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
                               SizedBox(height: 16),
                               
-                                                             // Email Field
-                               Container(
-                                 height: 48,
-                                 child: TextFormField(
-                                   controller: emailController,
-                                   focusNode: emailFocusNode,
-                                   keyboardType: TextInputType.emailAddress,
-                                   textInputAction: TextInputAction.next,
-                                   validator: (value) {
-                                     if (value == null || value.isEmpty) {
-                                       return 'Please enter your email address';
-                                     }
-                                     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                       return 'Please enter a valid email address';
-                                     }
-                                     return null;
-                                   },
-                                   decoration: InputDecoration(
-                                     labelText: 'Email Address',
-                                     hintText: 'Enter your email address',
-                                     hintStyle: TextStyle(
-                                       fontSize: 14,
-                                       color: Colors.grey[500],
-                                     ),
-                                     prefixIcon: Icon(
-                                       Icons.email_outlined,
-                                       color: primaryColor,
-                                       size: 20,
-                                     ),
-                                     border: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     enabledBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     focusedBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: primaryColor, width: 2),
-                                     ),
-                                     errorBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.red[300]!),
-                                     ),
-                                     filled: true,
-                                     fillColor: Colors.grey[50],
-                                     contentPadding: EdgeInsets.symmetric(
-                                       horizontal: 14,
-                                       vertical: 12,
-                                     ),
-                                   ),
-                                 ),
-                               ),
+                              // Email Field
+                              TextFormField(
+                                controller: emailController,
+                                focusNode: emailFocusNode,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter your email address';
+                                  }
+                                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                    return 'Please enter a valid email address';
+                                  }
+                                  if (value.length > 100) {
+                                    return 'Email must be less than 100 characters';
+                                  }
+                                  return null;
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'Email Address *',
+                                  hintText: 'Enter your email address',
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.email_outlined,
+                                    color: primaryColor,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: primaryColor, width: 2),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.red[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
                               SizedBox(height: 16),
                               
-                                                             // State Dropdown
-                               Container(
-                                 height: 48,
-                                 child: DropdownButtonFormField<String>(
-                                   value: _selectedState,
-                                   decoration: InputDecoration(
-                                     labelText: 'State',
-                                     hintText: 'Select your state',
-                                     hintStyle: TextStyle(
-                                       fontSize: 14,
-                                       color: Colors.grey[500],
-                                     ),
-                                     prefixIcon: Icon(
-                                       Icons.location_on_outlined,
-                                       color: primaryColor,
-                                       size: 20,
-                                     ),
-                                     border: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     enabledBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     focusedBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: primaryColor, width: 2),
-                                     ),
-                                     errorBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.red[300]!),
-                                     ),
-                                     filled: true,
-                                     fillColor: Colors.grey[50],
-                                     contentPadding: EdgeInsets.symmetric(
-                                       horizontal: 14,
-                                       vertical: 12,
-                                     ),
-                                   ),
-                                   items: _states.map((String state) {
-                                     return DropdownMenuItem<String>(
-                                       value: state,
-                                       child: Text(state),
-                                     );
-                                   }).toList(),
-                                   onChanged: (String? newValue) {
-                                     setState(() {
-                                       _selectedState = newValue;
-                                       _selectedDistrict = null; // Reset district when state changes
-                                     });
-                                   },
-                                   validator: (value) {
-                                     if (value == null || value.isEmpty) {
-                                       return 'Please select your state';
-                                     }
-                                     return null;
-                                   },
-                                 ),
-                               ),
+                              // State Dropdown
+                              DropdownButtonFormField<String>(
+                                value: _selectedState,
+                                decoration: InputDecoration(
+                                  labelText: 'State *',
+                                  hintText: 'Select your state',
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.location_on_outlined,
+                                    color: primaryColor,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: primaryColor, width: 2),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.red[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                items: _states.map((String state) {
+                                  return DropdownMenuItem<String>(
+                                    value: state,
+                                    child: Text(state),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedState = newValue;
+                                    _selectedDistrict = null; // Reset district when state changes
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select your state';
+                                  }
+                                  return null;
+                                },
+                              ),
                               SizedBox(height: 16),
                               
-                                                             // District Dropdown
-                               Container(
-                                 height: 48,
-                                 child: DropdownButtonFormField<String>(
-                                   value: _selectedDistrict,
-                                   decoration: InputDecoration(
-                                     labelText: 'District',
-                                     hintText: 'Select your district',
-                                     hintStyle: TextStyle(
-                                       fontSize: 14,
-                                       color: Colors.grey[500],
-                                     ),
-                                     prefixIcon: Icon(
-                                       Icons.location_city_outlined,
-                                       color: primaryColor,
-                                       size: 20,
-                                     ),
-                                     border: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     enabledBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     focusedBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: primaryColor, width: 2),
-                                     ),
-                                     errorBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.red[300]!),
-                                     ),
-                                     filled: true,
-                                     fillColor: Colors.grey[50],
-                                     contentPadding: EdgeInsets.symmetric(
-                                       horizontal: 14,
-                                       vertical: 12,
-                                     ),
-                                   ),
-                                   items: _districts.map((String district) {
-                                     return DropdownMenuItem<String>(
-                                       value: district,
-                                       child: Text(district),
-                                     );
-                                   }).toList(),
-                                   onChanged: (String? newValue) {
-                                     setState(() {
-                                       _selectedDistrict = newValue;
-                                     });
-                                   },
-                                   validator: (value) {
-                                     if (value == null || value.isEmpty) {
-                                       return 'Please select your district';
-                                     }
-                                     return null;
-                                   },
-                                 ),
-                               ),
+                              // District Dropdown
+                              DropdownButtonFormField<String>(
+                                value: _selectedDistrict,
+                                decoration: InputDecoration(
+                                  labelText: 'District *',
+                                  hintText: _selectedState == null 
+                                      ? 'Select state first' 
+                                      : 'Select your district',
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.location_city_outlined,
+                                    color: primaryColor,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: primaryColor, width: 2),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.red[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                items: _districts.map((String district) {
+                                  return DropdownMenuItem<String>(
+                                    value: district,
+                                    child: Text(district),
+                                  );
+                                }).toList(),
+                                onChanged: _selectedState == null ? null : (String? newValue) {
+                                  setState(() {
+                                    _selectedDistrict = newValue;
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select your district';
+                                  }
+                                  return null;
+                                },
+                              ),
                               SizedBox(height: 16),
                               
-                                                             // Full Address Field
-                               Container(
-                                 height: 48,
-                                 child: TextFormField(
-                                   controller: addressController,
-                                   focusNode: addressFocusNode,
-                                   keyboardType: TextInputType.multiline,
-                                   textInputAction: TextInputAction.done,
-                                   maxLines: 1,
-                                   validator: (value) {
-                                     if (value == null || value.isEmpty) {
-                                       return 'Please enter your full address';
-                                     }
-                                     if (value.trim().length < 10) {
-                                       return 'Address must be at least 10 characters';
-                                     }
-                                     return null;
-                                   },
-                                   decoration: InputDecoration(
-                                     labelText: 'Full Address',
-                                     hintText: 'Enter your complete address',
-                                     hintStyle: TextStyle(
-                                       fontSize: 14,
-                                       color: Colors.grey[500],
-                                     ),
-                                     prefixIcon: Icon(
-                                       Icons.home_outlined,
-                                       color: primaryColor,
-                                       size: 20,
-                                     ),
-                                     border: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     enabledBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     focusedBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: primaryColor, width: 2),
-                                     ),
-                                     errorBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(10),
-                                       borderSide: BorderSide(color: Colors.red[300]!),
-                                     ),
-                                     filled: true,
-                                     fillColor: Colors.grey[50],
-                                     contentPadding: EdgeInsets.symmetric(
-                                       horizontal: 14,
-                                       vertical: 12,
-                                     ),
-                                   ),
-                                 ),
-                               ),
+                              // Full Address Field
+                              TextFormField(
+                                controller: addressController,
+                                focusNode: addressFocusNode,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.done,
+                                maxLines: 3,
+                                minLines: 2,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter your full address';
+                                  }
+                                  if (value.trim().length < 10) {
+                                    return 'Address must be at least 10 characters';
+                                  }
+                                  if (value.trim().length > 200) {
+                                    return 'Address must be less than 200 characters';
+                                  }
+                                  return null;
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'Full Address *',
+                                  hintText: 'Enter your complete address (street, city, PIN code)',
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.home_outlined,
+                                    color: primaryColor,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: primaryColor, width: 2),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.red[300]!),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[50],
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  alignLabelWithHint: true,
+                                ),
+                              ),
                               SizedBox(height: 24),
                               
                               // Complete Profile Button

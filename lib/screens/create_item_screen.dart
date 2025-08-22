@@ -758,6 +758,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             return;
           }
           
+          print('📸 [DEBUG] Image selected from camera: ${image.path}');
           setState(() {
             _selectedImagePath = image.path;
           });
@@ -799,6 +800,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             return;
           }
           
+          print('📸 [DEBUG] Image selected from gallery: ${image.path}');
           setState(() {
             _selectedImagePath = image.path;
           });
@@ -1379,6 +1381,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           categoryId = selectedCategory['id'] as int?;
         }
 
+        print('🔍 [DEBUG] Creating item with image path: $_selectedImagePath');
         final result = await ApiService.createItem(
           userId: '1', // TODO: Get actual user ID from auth service
           itemName: _nameController.text.trim(),

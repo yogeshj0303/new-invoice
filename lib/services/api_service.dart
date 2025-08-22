@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../models/business_profile.dart';
 import '../models/customer.dart';
-import 'dart:io'; // Added for File
+import 'dart:io'; // Added for File and Platform
 import '../models/item.dart'; // Added for Item
 
 class ApiService {
@@ -783,40 +783,72 @@ class ApiService {
 
       print('🔍 [DEBUG] Create Item Request:');
       print('URL: $url');
-      print('Headers: ${ApiConstants.defaultHeaders}');
+      print('Original default headers: ${ApiConstants.defaultHeaders}');
       print('Form Fields: $formFields');
+      print('Image Paths: $imagePaths');
 
       // Create multipart request for form data
       final request = http.MultipartRequest('POST', Uri.parse(url));
       
-      // Add headers
-      request.headers.addAll(ApiConstants.defaultHeaders);
+      // Add headers (excluding Content-Type for multipart requests)
+      final headers = Map<String, String>.from(ApiConstants.defaultHeaders);
+      headers.remove('Content-Type'); // Remove Content-Type for multipart requests
+      print('📡 [DEBUG] Modified headers (Content-Type removed):');
+      print('   Modified headers: $headers');
+      request.headers.addAll(headers);
+      
+      // Debug: Print the actual headers being sent with the request
+      print('📡 [DEBUG] Actual request headers after modification:');
+      print('   Headers: ${request.headers}');
       
       // Add form fields
       request.fields.addAll(formFields);
       
       // Add images if they exist
       if (imagePaths != null && imagePaths.isNotEmpty) {
+        print('📸 [DEBUG] Processing ${imagePaths.length} image paths');
         for (int i = 0; i < imagePaths.length; i++) {
           final imagePath = imagePaths[i];
-          if (imagePath.startsWith('/') || imagePath.contains('\\')) {
-            final file = File(imagePath);
-            if (await file.exists()) {
-              final stream = http.ByteStream(file.openRead());
-              final length = await file.length();
-              final multipartFile = http.MultipartFile(
-                'other_images[$i]',
-                stream,
-                length,
-                filename: file.path.split('/').last,
-              );
-              request.files.add(multipartFile);
-            }
+          print('📸 [DEBUG] Processing image path $i: $imagePath');
+          final file = File(imagePath);
+          if (await file.exists()) {
+            final stream = http.ByteStream(file.openRead());
+            final length = await file.length();
+            print('📸 [DEBUG] File exists, size: $length bytes');
+            final filename = file.path.split(Platform.pathSeparator).last;
+            print('📸 [DEBUG] Filename: $filename');
+            final multipartFile = http.MultipartFile(
+              'images[$i]', // Use indexed field name as expected by backend
+              stream,
+              length,
+              filename: filename,
+            );
+            request.files.add(multipartFile);
+            print('📸 [DEBUG] Added image file: ${file.path} (size: $length bytes)');
+          } else {
+            print('⚠️ [DEBUG] Image file not found: $imagePath');
           }
         }
+      } else {
+        print('⚠️ [DEBUG] No image paths provided or empty');
       }
 
       print('📡 [DEBUG] Sending multipart request...');
+      print('📸 [DEBUG] Total files to upload: ${request.files.length}');
+      print('📸 [DEBUG] Total form fields: ${request.fields.length}');
+      
+      // Debug: Print all form fields and files being sent
+      print('📤 [DEBUG] Form fields being sent:');
+      request.fields.forEach((key, value) {
+        print('   $key: $value');
+      });
+      
+      print('📤 [DEBUG] Files being sent:');
+      for (int i = 0; i < request.files.length; i++) {
+        final file = request.files[i];
+        print('   File $i: ${file.field} - ${file.filename} (${file.length} bytes)');
+      }
+      
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
       
