@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../constants/api_constants.dart';
 import '../widgets/edit_bottom_sheet_content.dart';
 import 'create_invoice.dart';
+import 'item_details_screen.dart'; // Added import for ItemDetailsScreen
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
@@ -20,7 +21,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   final _searchController = TextEditingController();
   String _selectedCategory = 'All Categories';
-  final List<String> _categories = ['All Categories', 'Food', 'Beverages', 'Snacks', 'Electronics'];
+  
+  // Categories from API
+  List<Map<String, dynamic>> _categories = [];
+  bool _isLoadingCategories = false;
   
   // Track which items are in cart mode
   final Set<int> _itemsInCart = {};
@@ -36,6 +40,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   void initState() {
     super.initState();
     _loadItems();
+    _loadCategories();
   }
 
   Future<void> _loadItems() async {
@@ -69,6 +74,118 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
+  Future<void> _loadCategories() async {
+    print('🔄 [DEBUG] _loadCategories called...');
+    setState(() {
+      _isLoadingCategories = true;
+    });
+
+    try {
+      final response = await ApiService.getItemCategories();
+      
+      if (response['status'] == true && response['data'] != null) {
+        setState(() {
+          _categories = List<Map<String, dynamic>>.from(response['data']);
+        });
+        
+        print('✅ [DEBUG] Categories loaded successfully: ${_categories.length} categories');
+        
+        // Always reset to 'All Categories' when categories are loaded to ensure consistency
+        setState(() {
+          _selectedCategory = 'All Categories';
+        });
+      } else {
+        setState(() {
+          _categories = [];
+          _selectedCategory = 'All Categories';
+        });
+        print('❌ [DEBUG] Failed to load categories: ${response['message'] ?? 'Unknown error'}');
+      }
+    } catch (e) {
+      setState(() {
+        _categories = [];
+        _selectedCategory = 'All Categories';
+      });
+      print('❌ [DEBUG] Error loading categories: $e');
+    } finally {
+      setState(() {
+        _isLoadingCategories = false;
+      });
+    }
+  }
+
+  // Refresh both items and categories
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _loadItems(),
+      _loadCategories(),
+    ]);
+  }
+
+  // Get the list of available category names
+  List<String> get _availableCategoryNames {
+    if (_isLoadingCategories) {
+      return ['Loading...'];
+    }
+    
+    final categories = <String>['All Categories'];
+    final seenNames = <String>{};
+    
+    for (final category in _categories) {
+      final categoryName = category['item_category_name'] as String?;
+      if (categoryName != null && categoryName.isNotEmpty) {
+        // Handle duplicate category names by adding ID suffix
+        String uniqueName = categoryName;
+        int counter = 1;
+        
+        while (seenNames.contains(uniqueName)) {
+          uniqueName = '$categoryName (${counter++})';
+        }
+        
+        seenNames.add(uniqueName);
+        categories.add(uniqueName);
+      }
+    }
+    
+    return categories;
+  }
+
+  // Get category ID from selected category name
+  int? _getCategoryIdFromName(String categoryName) {
+    if (categoryName == 'All Categories') return null;
+    
+    print('🔍 [DEBUG] Looking for category: $categoryName');
+    print('🔍 [DEBUG] Available categories from API: ${_categories.map((e) => e['item_category_name']).toList()}');
+    
+    // Find the category ID from the selected category name
+    // Handle both original names and names with ID suffixes
+    final selectedCategory = _categories.firstWhere(
+      (cat) {
+        final catName = cat['item_category_name'] as String?;
+        if (catName == null) return false;
+        
+        // Check if it's an exact match
+        if (catName == categoryName) return true;
+        
+        // Check if it's a name with ID suffix (e.g., "new (1)" matches "new")
+        if (categoryName.startsWith('$catName (')) return true;
+        
+        return false;
+      },
+      orElse: () => <String, dynamic>{},
+    );
+    
+    print('🔍 [DEBUG] Selected category found: $selectedCategory');
+    
+    if (selectedCategory.isNotEmpty) {
+      final categoryId = selectedCategory['id'] as int?;
+      print('🔍 [DEBUG] Category ID: $categoryId');
+      return categoryId;
+    }
+    print('🔍 [DEBUG] No category ID found');
+    return null;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -76,18 +193,43 @@ class _AddItemScreenState extends State<AddItemScreen> {
   }
 
   void _filterItems() {
+    print('🔄 [DEBUG] _filterItems called with search: "${_searchController.text}" and category: "$_selectedCategory"');
+    print('🔄 [DEBUG] Total items: ${_items.length}');
+    
     setState(() {
       _filteredItems = _items.where((item) {
         final matchesSearch = item.itemName.toLowerCase().contains(_searchController.text.toLowerCase()) ||
                             item.id.toString().contains(_searchController.text.toLowerCase());
+        
+        // Apply category filter using category ID for more accurate matching
         final matchesCategory = _selectedCategory == 'All Categories' || 
-                               (item.details.itemCategoryId != null && _getCategoryName(item.details.itemCategoryId!) == _selectedCategory);
-        return matchesSearch && matchesCategory;
+                               (item.details.itemCategoryId != null && 
+                                _getCategoryIdFromName(_selectedCategory) == item.details.itemCategoryId);
+        
+        final result = matchesSearch && matchesCategory;
+        if (result) {
+          print('✅ [DEBUG] Item "${item.itemName}" matches filters');
+        }
+        
+        return result;
       }).toList();
     });
+    
+    print('🔄 [DEBUG] Filtered items count: ${_filteredItems.length}');
   }
 
   String _getCategoryName(int categoryId) {
+    // Find category name from the loaded categories
+    final category = _categories.firstWhere(
+      (cat) => cat['id'] == categoryId,
+      orElse: () => <String, dynamic>{},
+    );
+    
+    if (category.isNotEmpty) {
+      return category['item_category_name'] as String? ?? 'Other';
+    }
+    
+    // Fallback to hardcoded mapping if API categories are not available
     final categoryMap = {
       1: 'Food',
       2: 'Beverages',
@@ -318,47 +460,94 @@ class _AddItemScreenState extends State<AddItemScreen> {
         height: 32,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _selectedCategory != 'All Categories' 
+              ? primaryColor.withOpacity(0.05) 
+              : Colors.white,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(
+            color: _selectedCategory != 'All Categories' 
+                ? primaryColor.withOpacity(0.5) 
+                : Colors.grey[300]!,
+            width: _selectedCategory != 'All Categories' ? 1.5 : 1,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              _selectedCategory,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1A1A1A),
+            if (_isLoadingCategories)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[400]!),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                _selectedCategory,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _selectedCategory != 'All Categories' 
+                      ? primaryColor 
+                      : const Color(0xFF1A1A1A),
+                ),
               ),
-            ),
             Icon(
               Icons.keyboard_arrow_down,
-              color: Colors.grey[600],
+              color: _selectedCategory != 'All Categories' 
+                  ? primaryColor 
+                  : Colors.grey[600],
               size: 16,
             ),
           ],
         ),
       ),
-      itemBuilder: (context) => _categories.map((category) {
+      itemBuilder: (context) => _availableCategoryNames.map((category) {
         return PopupMenuItem<String>(
           value: category,
-          child: Text(
-            category,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: category == _selectedCategory ? primaryColor : Colors.grey[700],
-            ),
+          child: Row(
+            children: [
+              Icon(
+                category == 'All Categories' ? Icons.category_outlined : Icons.category,
+                size: 14,
+                color: category == 'All Categories' ? Colors.grey[400] : primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                category,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: category == _selectedCategory ? primaryColor : Colors.grey[700],
+                ),
+              ),
+            ],
           ),
         );
       }).toList(),
       onSelected: (category) {
-        setState(() {
-          _selectedCategory = category;
-        });
-        _filterItems();
+        if (category != 'Loading...') {
+          setState(() {
+            _selectedCategory = category;
+          });
+          _filterItems();
+        }
       },
     );
   }
@@ -403,7 +592,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadItems,
+      onRefresh: _refreshAll,
       color: primaryColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -423,7 +612,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -436,77 +624,106 @@ class _AddItemScreenState extends State<AddItemScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // Item Icon/Image
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E8),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Center(
-              child: Text(
-                item.itemName.isNotEmpty ? item.itemName[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E7D32),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            // Navigate to item details screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ItemDetailsScreen(
+                  itemId: item.id,
+                  onItemDeleted: () {
+                    // Refresh the items list when an item is deleted
+                    _loadItems();
+                  },
+                  onItemUpdated: () {
+                    // Refresh the items list when an item is updated
+                    print('🔄 [DEBUG] AddItemScreen: Item updated via details screen, refreshing items...');
+                    _loadItems();
+                  },
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Item Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
               children: [
-                Text(
-                  item.itemName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
+                // Item Icon/Image
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      '₹ ${pricing?.salespriceAmount ?? '0.00'}/${pricing?.unit ?? 'PCS'}',
+                  child: Center(
+                    child: Text(
+                      item.itemName.isNotEmpty ? item.itemName[0].toUpperCase() : '?',
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF666666),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E7D32),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.grey[500],
-                      size: 14,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'STOCK: ${stock?.openingStock ?? 0}${pricing?.unit ?? 'PCS'}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: (stock?.openingStock ?? 0) < 0 ? Colors.red[600] : Colors.grey[600],
                   ),
                 ),
+                const SizedBox(width: 10),
+                // Item Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.itemName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            '₹ ${pricing?.salespriceAmount ?? '0.00'}/${pricing?.unit ?? 'PCS'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.grey[500],
+                            size: 14,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'STOCK: ${stock?.openingStock ?? 0}${pricing?.unit ?? 'PCS'}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: (stock?.openingStock ?? 0) < 0 ? Colors.red[600] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Add Button or Cart Controls
+                _itemsInCart.contains(item.id) 
+                  ? _buildCartControls(item)
+                  : _buildAddButton(item),
               ],
             ),
           ),
-          // Add Button or Cart Controls
-          _itemsInCart.contains(item.id) 
-            ? _buildCartControls(item)
-            : _buildAddButton(item),
-        ],
+        ),
       ),
     );
   }
@@ -598,7 +815,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap: () => _addItemToCart(item),
+          onTap: () {
+            // Prevent event bubbling and handle add to cart
+            _addItemToCart(item);
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Text(
@@ -634,7 +854,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(4),
-              onTap: () => _editItem(item),
+              onTap: () {
+                // Prevent event bubbling and handle edit
+                _editItem(item);
+              },
               child: Center(
                 child: Text(
                   'EDIT',
@@ -665,7 +888,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(3),
-                  onTap: () => _decrementQuantity(item.id),
+                  onTap: () {
+                    // Prevent event bubbling and handle decrement
+                    _decrementQuantity(item.id);
+                  },
                   child: Center(
                     child: Icon(
                       Icons.remove,
@@ -707,7 +933,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(3),
-                  onTap: () => _incrementQuantity(item.id),
+                  onTap: () {
+                    // Prevent event bubbling and handle increment
+                    _incrementQuantity(item.id);
+                  },
                   child: Center(
                     child: Icon(
                       Icons.add,
