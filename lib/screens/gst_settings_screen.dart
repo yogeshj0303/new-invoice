@@ -1120,61 +1120,33 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                         ),
                       ),
                       
-                      const SizedBox(height: 24),
-                      
-                      // Color Customization Section
-                      Text(
-                        'Customize Colors',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                          fontFamily: GoogleFonts.openSans().fontFamily,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Primary Color Palette
-                      _buildColorPalette(
-                        title: 'Primary Color',
-                        colors: primaryColors,
-                        selectedColor: selectedPrimaryColor,
-                        onColorSelected: (color) {
-                          setState(() {
-                            selectedPrimaryColor = color;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      // Secondary Color Palette
-                      _buildColorPalette(
-                        title: 'Secondary Color',
-                        colors: secondaryColors,
-                        selectedColor: selectedSecondaryColor,
-                        onColorSelected: (color) {
-                          setState(() {
-                            selectedSecondaryColor = color;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 20),
-                      
-                      // Accent Color Palette
-                      _buildColorPalette(
-                        title: 'Accent Color',
-                        colors: accentColors,
-                        selectedColor: selectedAccentColor,
-                        onColorSelected: (color) {
-                          setState(() {
-                            selectedAccentColor = color;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 24),
+                                             const SizedBox(height: 20),
+                       
+                       // Color Customization Section
+                       Text(
+                         'Customize Colors',
+                         style: TextStyle(
+                           fontSize: 16,
+                           fontWeight: FontWeight.w600,
+                           color: Colors.black87,
+                           fontFamily: GoogleFonts.openSans().fontFamily,
+                         ),
+                       ),
+                       const SizedBox(height: 12),
+                       
+                       // Primary Color Palette Only
+                       _buildColorPalette(
+                         title: 'Primary Color',
+                         colors: primaryColors,
+                         selectedColor: selectedPrimaryColor,
+                         onColorSelected: (color) {
+                           setState(() {
+                             selectedPrimaryColor = color;
+                           });
+                         },
+                       ),
+                       
+                       const SizedBox(height: 20),
                       
                       // Save Button
                       SizedBox(
@@ -1231,47 +1203,49 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
         Text(
           title,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
             color: Colors.black87,
           ),
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: colors.map((color) {
-            bool isSelected = color == selectedColor;
-            return GestureDetector(
-              onTap: () => onColorSelected(color),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: isSelected ? Colors.black : Colors.grey[300]!,
-                    width: isSelected ? 3 : 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+        const SizedBox(height: 8),
+        Container(
+          height: 40,
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey[200]!, width: 1),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: colors.map((color) {
+                bool isSelected = color == selectedColor;
+                return GestureDetector(
+                  onTap: () => onColorSelected(color),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.only(right: 1),
+                    decoration: BoxDecoration(
+                      color: color,
+                      border: Border.all(
+                        color: isSelected ? Colors.black : Colors.transparent,
+                        width: isSelected ? 2 : 0,
+                      ),
                     ),
-                  ],
-                ),
-                child: isSelected
-                    ? const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 20,
-                      )
-                    : null,
-              ),
-            );
-          }).toList(),
+                    child: isSelected
+                        ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 18,
+                          )
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ],
     );
