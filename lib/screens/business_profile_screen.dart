@@ -68,6 +68,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
   bool _isLoading = false;
   bool _hasSignature = false;
   String? _signaturePath;
+  
+  // Track if any changes were made
+  bool _hasChanges = false;
 
   @override
   void initState() {
@@ -92,6 +95,62 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     
     // Load business profile data
     _loadBusinessProfile();
+    
+    // Add listeners to track changes
+    _addChangeListeners();
+  }
+
+  // Add listeners to track changes in form fields
+  void _addChangeListeners() {
+    _businessNameController.addListener(_onFieldChanged);
+    _gstinController.addListener(_onFieldChanged);
+    _phone1Controller.addListener(_onFieldChanged);
+    _phone2Controller.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _businessEmailController.addListener(_onFieldChanged);
+    _businessAddressController.addListener(_onFieldChanged);
+    _pincodeController.addListener(_onFieldChanged);
+    _businessDescriptionController.addListener(_onFieldChanged);
+    _websiteController.addListener(_onFieldChanged);
+  }
+  
+  // Called when any form field changes
+  void _onFieldChanged() {
+    if (!_hasChanges) {
+      setState(() {
+        _hasChanges = true;
+      });
+    }
+  }
+  
+  // Show dialog when user tries to leave with unsaved changes
+  void _showUnsavedChangesDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Unsaved Changes'),
+          content: const Text('You have unsaved changes. Are you sure you want to leave without saving?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                // Don't navigate back, stay on the screen
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(false); // Go back without saving
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Load business profile from API
@@ -381,9 +440,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
        print('✅ [DEBUG] Business signature path set: $_businessSignaturePath');
      }
 
-    setState(() {});
-    // Debug signature state after populating form fields
-    _debugSignatureState();
+         setState(() {
+       _hasChanges = false; // Reset changes flag when loading existing profile
+     });
+     // Debug signature state after populating form fields
+     _debugSignatureState();
   }
 
   // Clear form fields to show empty form for creating new profile
@@ -414,7 +475,10 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     _signaturePath = null;
     _businessSignaturePath = null;
     
-    print('✅ [DEBUG] Form fields cleared successfully');
+         setState(() {
+       _hasChanges = false; // Reset changes flag when clearing fields
+     });
+     print('✅ [DEBUG] Form fields cleared successfully');
   }
 
   // Map API state values to dropdown options
@@ -560,17 +624,27 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: _buildAppBar(),
-        body: _isLoadingProfile 
-          ? _buildLoadingBody() 
-          : _buildBody(), // Always show the form body, whether profile exists or not
+    return WillPopScope(
+      onWillPop: () async {
+        // If there are unsaved changes, show confirmation dialog
+        if (_hasChanges) {
+          _showUnsavedChangesDialog();
+          return false; // Don't pop yet
+        }
+        return true; // Allow pop
+      },
+      child: AnnotatedRegion(
+        value: SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          appBar: _buildAppBar(),
+          body: _isLoadingProfile 
+            ? _buildLoadingBody() 
+            : _buildBody(), // Always show the form body, whether profile exists or not
+        ),
       ),
     );
   }
@@ -614,7 +688,15 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             color: Color(0xFF1A1A1A),
             size: 18,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // If there are unsaved changes, show confirmation dialog
+            if (_hasChanges) {
+              _showUnsavedChangesDialog();
+            } else {
+              // No changes, just go back
+              Navigator.of(context).pop(false);
+            }
+          },
           padding: const EdgeInsets.all(8),
         ),
       ),
@@ -1255,10 +1337,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
                               final tempFile = File('${tempDir.path}/digital_signature_${DateTime.now().millisecondsSinceEpoch}.png');
                               await tempFile.writeAsBytes(signature);
                               
-                              setState(() {
-                                _hasSignature = true;
-                                _signaturePath = tempFile.path;
-                              });
+                                                             setState(() {
+                                 _hasSignature = true;
+                                 _signaturePath = tempFile.path;
+                                 _hasChanges = true;
+                               });
 
                               if (mounted) {
                                 Navigator.of(context).pop();
@@ -1346,11 +1429,12 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       }
 
       if (image != null) {
-        setState(() {
-          _hasSignature = true;
-          _signaturePath = image.path;
-          // Here you would process and save the uploaded signature
-        });
+                 setState(() {
+           _hasSignature = true;
+           _signaturePath = image.path;
+           _hasChanges = true;
+           // Here you would process and save the uploaded signature
+         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1422,11 +1506,12 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             ),
             TextButton(
               onPressed: () {
-                setState(() {
-                  _hasSignature = false;
-                  _signaturePath = null;
-                  // Here you would also remove the signature from storage
-                });
+                                 setState(() {
+                   _hasSignature = false;
+                   _signaturePath = null;
+                   _hasChanges = true;
+                   // Here you would also remove the signature from storage
+                 });
 
                 Navigator.of(context).pop();
 
@@ -1494,12 +1579,13 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             'Puducherry',
             'Andaman and Nicobar Islands',
           ],
-          onChanged: (value) {
-            print('🔍 [DEBUG] State dropdown changed to: "$value"');
-            setState(() {
-              _selectedState = value;
-            });
-          },
+                     onChanged: (value) {
+             print('🔍 [DEBUG] State dropdown changed to: "$value"');
+             setState(() {
+               _selectedState = value;
+               _hasChanges = true;
+             });
+           },
           hint: _businessProfile == null ? 'Select the state where your business operates' : 'Select State',
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -1524,12 +1610,13 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             'Society',
             'Other',
           ],
-          onChanged: (value) {
-            print('🔍 [DEBUG] Business type dropdown changed to: "$value"');
-            setState(() {
-              _selectedBusinessType = value;
-            });
-          },
+                     onChanged: (value) {
+             print('🔍 [DEBUG] Business type dropdown changed to: "$value"');
+             setState(() {
+               _selectedBusinessType = value;
+               _hasChanges = true;
+             });
+           },
           hint: _businessProfile == null ? 'Select your business structure type' : 'Select Business Type',
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -1562,12 +1649,13 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             'Consulting',
             'Other',
           ],
-          onChanged: (value) {
-            print('🔍 [DEBUG] Business category dropdown changed to: "$value"');
-            setState(() {
-              _selectedBusinessCategory = value;
-            });
-          },
+                     onChanged: (value) {
+             print('🔍 [DEBUG] Business category dropdown changed to: "$value"');
+             setState(() {
+               _selectedBusinessCategory = value;
+               _hasChanges = true;
+             });
+           },
           hint: _businessProfile == null ? 'Select the category that best describes your business' : 'Select Business Category',
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -1951,10 +2039,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
                               final tempFile = File('${tempDir.path}/business_signature_${DateTime.now().millisecondsSinceEpoch}.png');
                               await tempFile.writeAsBytes(signature);
                               
-                              setState(() {
-                                _hasBusinessSignature = true;
-                                _businessSignaturePath = tempFile.path;
-                              });
+                                                             setState(() {
+                                 _hasBusinessSignature = true;
+                                 _businessSignaturePath = tempFile.path;
+                                 _hasChanges = true;
+                               });
 
                               if (mounted) {
                                 Navigator.of(context).pop();
@@ -2042,10 +2131,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       }
 
       if (image != null) {
-        setState(() {
-          _hasBusinessSignature = true;
-          _businessSignaturePath = image.path;
-        });
+                 setState(() {
+           _hasBusinessSignature = true;
+           _businessSignaturePath = image.path;
+           _hasChanges = true;
+         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -2116,10 +2206,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             ),
             TextButton(
               onPressed: () {
-                setState(() {
-                  _hasBusinessSignature = false;
-                  _businessSignaturePath = null;
-                });
+                                 setState(() {
+                   _hasBusinessSignature = false;
+                   _businessSignaturePath = null;
+                   _hasChanges = true;
+                 });
 
                 Navigator.of(context).pop();
 
@@ -2385,10 +2476,24 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       print('   Digital Signature Path: $_signaturePath');
       print('   Business Signature Path: $_businessSignaturePath');
 
+      // Get current user ID from auth service
+      final currentUserId = await AuthUtils.getCurrentUserId();
+      if (currentUserId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('User not authenticated. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       // Call the update API (it handles both create and update)
-      print('🔍 [DEBUG] Calling ApiService.updateBusinessProfile...');
+      print('🔍 [DEBUG] Calling ApiService.updateBusinessProfile with userId: $currentUserId');
       final result = await ApiService.updateBusinessProfile(
-        userId: 1, // For now, using user_id = 1 as per the API example
+        userId: currentUserId,
         businessName: _businessNameController.text.trim(),
         gstNo: _gstinController.text.trim(),
         phoneNoFirst: _phone1Controller.text.trim(),
@@ -2436,9 +2541,20 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
             ),
           );
           
+          // Reset the changes flag since profile was saved successfully
+          setState(() {
+            _hasChanges = false;
+          });
+          
           // Refresh the profile data to show updated information
           print('🔄 [DEBUG] Refreshing business profile...');
           _refreshBusinessProfile();
+          
+          // Return true to indicate successful update/creation
+          // This will trigger the callback in the menu screen
+          if (mounted) {
+            Navigator.of(context).pop(true);
+          }
         }
       } else {
         print('❌ [DEBUG] Failed to ${_businessProfile == null ? 'create' : 'update'} business profile: ${result[ApiConstants.messageKey]}');

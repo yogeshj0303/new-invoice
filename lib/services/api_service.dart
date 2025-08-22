@@ -134,10 +134,28 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('✅ [DEBUG] Success Response Data: $data');
-        return {
+        print('   Response type: ${data.runtimeType}');
+        print('   Response keys: ${data.keys.toList()}');
+        
+        // Check if user_info exists in the response
+        Map<String, dynamic> responseData = {
           ApiConstants.successKey: true,
           ApiConstants.messageKey: data[ApiConstants.messageKey],
         };
+        
+        // Add user_info if it exists
+        if (data.containsKey('user_info')) {
+          responseData['user_info'] = data['user_info'];
+          print('✅ [DEBUG] User info found in response: ${data['user_info']}');
+          print('   User info type: ${data['user_info'].runtimeType}');
+          if (data['user_info'] is Map) {
+            print('   User info keys: ${data['user_info'].keys.toList()}');
+          }
+        } else {
+          print('ℹ️ [DEBUG] No user_info found in response');
+        }
+        
+        return responseData;
       } else {
         // Handle different status codes
         final errorData = jsonDecode(response.body);
@@ -434,7 +452,7 @@ class ApiService {
       print('Status Code: ${response.statusCode}');
       print('Body: $responseBody');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(responseBody);
         print('🔍 [DEBUG] Parsed response data: $data');
         

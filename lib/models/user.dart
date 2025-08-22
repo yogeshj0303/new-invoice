@@ -34,16 +34,16 @@ class User {
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       email: json['email'] ?? '',
-      emailVerifiedAt: json['email_verified_at'],
+      emailVerifiedAt: json['email_verified_at']?.toString(),
       fullAddress: json['full_address'] ?? '',
       state: json['state'] ?? '',
       district: json['district'] ?? '',
       phone: json['phone'] ?? '',
-      verifiedOtp: json['verified_otp'] ?? '0',
-      avatar: json['avatar'],
-      createdAt: json['created_at'] ?? '',
-      updatedAt: json['updated_at'] ?? '',
-      otpVerified: json['otp_verified'] ?? '0',
+      verifiedOtp: json['verified_otp']?.toString() ?? '0',
+      avatar: json['avatar']?.toString(),
+      createdAt: json['created_at']?.toString() ?? '',
+      updatedAt: json['updated_at']?.toString() ?? '',
+      otpVerified: json['otp_verified']?.toString() ?? '0',
     );
   }
 

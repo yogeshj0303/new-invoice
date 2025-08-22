@@ -4,6 +4,9 @@ import 'package:pinput/pinput.dart';
 import 'dart:async';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
+import '../utils/auth_utils.dart';
+import '../models/user.dart';
+import 'main_screen.dart'; // Added import for MainScreen
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -169,6 +172,55 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Tick
     }
   }
 
+  // Helper method to check if user profile is complete
+  bool _isUserProfileComplete(User user) {
+    // Check if all required fields have meaningful values
+    bool hasValidName = user.name.trim().isNotEmpty && user.name.trim().length >= 2;
+    bool hasValidEmail = user.email.trim().isNotEmpty && user.email.contains('@');
+    bool hasValidAddress = user.fullAddress.trim().isNotEmpty && user.fullAddress.trim().length >= 5; // Reduced from 10 to 5
+    bool hasValidState = user.state.trim().isNotEmpty;
+    bool hasValidDistrict = user.district.trim().isNotEmpty;
+    bool hasValidPhone = user.phone.trim().isNotEmpty && user.phone.trim().length >= 10; // Changed from == to >=
+    
+    print('🔍 [DEBUG] Profile completeness check:');
+    print('   Name valid: $hasValidName (${user.name})');
+    print('   Email valid: $hasValidEmail (${user.email})');
+    print('   Address valid: $hasValidAddress (${user.fullAddress})');
+    print('   State valid: $hasValidState (${user.state})');
+    print('   District valid: $hasValidDistrict (${user.district})');
+    print('   Phone valid: $hasValidPhone (${user.phone})');
+    
+    // Additional detailed debugging
+    print('   Name length: ${user.name.trim().length}');
+    print('   Email length: ${user.email.trim().length}');
+    print('   Address length: ${user.fullAddress.trim().length}');
+    print('   State length: ${user.state.trim().length}');
+    print('   District length: ${user.district.trim().length}');
+    print('   Phone length: ${user.phone.trim().length}');
+    
+    bool isComplete = hasValidName && hasValidEmail && hasValidAddress && 
+                     hasValidState && hasValidDistrict && hasValidPhone;
+    
+    print('   Overall profile complete: $isComplete');
+    
+    // If validation fails, check if we have the minimum required data
+    if (!isComplete) {
+      print('⚠️ [DEBUG] Strict validation failed, checking minimum requirements...');
+      
+      // Minimum requirement: at least name, email, and phone
+      bool hasMinimumData = hasValidName && hasValidEmail && hasValidPhone;
+      print('   Has minimum data: $hasMinimumData');
+      
+      // If we have minimum data, consider it complete enough
+      if (hasMinimumData) {
+        print('✅ [DEBUG] Minimum data requirements met, considering profile complete');
+        return true;
+      }
+    }
+    
+    return isComplete;
+  }
+
   void _verifyOTP() async {
     if (_enteredOTP.length != 4) return;
     
@@ -202,21 +254,216 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> with Tick
       }
 
       if (result[ApiConstants.successKey]) {
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result[ApiConstants.messageKey]),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
+        print('✅ [DEBUG] OTP verification successful!');
+        print('   Response: $result');
         
-        // Navigate to complete profile screen on successful verification
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/complete-profile', arguments: widget.phoneNumber);
+        // Check if user information exists in the response
+        if (result['user_info'] != null) {
+          print('✅ [DEBUG] User information found in response');
+          print('   Raw user_info: ${result['user_info']}');
+          
+          try {
+            // Parse user data from the response
+            final userData = result['user_info'];
+            print('   User data type: ${userData.runtimeType}');
+            print('   User data keys: ${userData.keys.toList()}');
+            
+            final user = User.fromJson(userData);
+            
+            print('✅ [DEBUG] User data parsed successfully:');
+            print('   ID: ${user.id}');
+            print('   Name: ${user.name}');
+            print('   Email: ${user.email}');
+            print('   Phone: ${user.phone}');
+            print('   State: ${user.state}');
+            print('   District: ${user.district}');
+            print('   Address: ${user.fullAddress}');
+            
+            // Check if user profile is complete
+            bool isProfileComplete = _isUserProfileComplete(user);
+            
+            print('🔍 [DEBUG] Final profile completeness decision: $isProfileComplete');
+            
+            if (isProfileComplete) {
+              print('✅ [DEBUG] User profile is complete, proceeding to main screen');
+              
+              // Save user as logged in with complete user data
+              print('🔄 [DEBUG] Saving user login state and data...');
+              bool loginSaved = await AuthUtils.setLoggedIn(
+                phone: widget.phoneNumber,
+                name: user.name,
+                user: user,
+              );
+              
+              print('🔍 [DEBUG] Login save result: $loginSaved');
+              
+              if (loginSaved) {
+                print('✅ [DEBUG] User login state and data saved successfully');
+                
+                // Show success message
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Welcome back, ${user.name}!'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                }
+                
+                // Navigate directly to main screen since user profile is complete
+                if (mounted) {
+                  print('🔄 [DEBUG] Navigating to main screen (user profile complete)...');
+                  print('   Current route: ${ModalRoute.of(context)?.settings.name}');
+                  print('   Can pop: ${Navigator.of(context).canPop()}');
+                  
+                  // Add a small delay to ensure the success message is shown
+                  await Future.delayed(Duration(milliseconds: 500));
+                  
+                  try {
+                    print('🔄 [DEBUG] Attempting navigation with pushReplacementNamed to /main...');
+                    Navigator.pushReplacementNamed(context, '/main');
+                    print('✅ [DEBUG] Navigation to main screen successful');
+                  } catch (e) {
+                    print('❌ [ERROR] Navigation failed: $e');
+                    print('   Error type: ${e.runtimeType}');
+                    // Fallback: try to navigate with MaterialPageRoute
+                    try {
+                      print('🔄 [DEBUG] Trying fallback navigation with MaterialPageRoute...');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => MainScreen()),
+                      );
+                      print('✅ [DEBUG] Fallback navigation successful');
+                    } catch (e2) {
+                      print('❌ [ERROR] Fallback navigation also failed: $e2');
+                      print('   Second error type: ${e2.runtimeType}');
+                      // Show error message to user
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Login successful! Please restart the app to continue.'),
+                            duration: Duration(seconds: 5),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                }
+              } else {
+                print('⚠️ [WARNING] Failed to save login state, but continuing...');
+                
+                // Show success message
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result[ApiConstants.messageKey]),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                }
+                
+                // Navigate to main screen anyway
+                if (mounted) {
+                  print('🔄 [DEBUG] Attempting navigation despite login save failure...');
+                  
+                  // Add a small delay to ensure the success message is shown
+                  await Future.delayed(Duration(milliseconds: 500));
+                  
+                  try {
+                    Navigator.pushReplacementNamed(context, '/main');
+                    print('✅ [DEBUG] Navigation to main screen successful');
+                  } catch (e) {
+                    print('❌ [ERROR] Navigation failed: $e');
+                    // Fallback: try to navigate with MaterialPageRoute
+                    try {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => MainScreen()),
+                      );
+                      print('✅ [DEBUG] Fallback navigation successful');
+                    } catch (e2) {
+                      print('❌ [ERROR] Fallback navigation also failed: $e2');
+                      // Show error message to user
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Login successful! Please restart the app to continue.'),
+                            duration: Duration(seconds: 5),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                }
+              }
+            } else {
+              print('⚠️ [DEBUG] User profile is incomplete, redirecting to complete profile screen');
+              
+              // Show success message
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result[ApiConstants.messageKey]),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+              }
+              
+              // Navigate to complete profile screen since profile is incomplete
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/complete-profile', arguments: widget.phoneNumber);
+              }
+            }
+          } catch (e) {
+            print('❌ [ERROR] Failed to parse user data: $e');
+            print('   Error type: ${e.runtimeType}');
+            print('   Stack trace: ${StackTrace.current}');
+            print('🔄 [DEBUG] Falling back to complete profile flow...');
+            
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result[ApiConstants.messageKey]),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              );
+            }
+            
+            // Navigate to complete profile screen if user data parsing fails
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/complete-profile', arguments: widget.phoneNumber);
+            }
+          }
+        } else {
+          print('ℹ️ [DEBUG] No user information in response, user needs to complete profile');
+          
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result[ApiConstants.messageKey]),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+          
+          // Navigate to complete profile screen since no user info exists
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/complete-profile', arguments: widget.phoneNumber);
+          }
         }
       } else {
         // Show error message
