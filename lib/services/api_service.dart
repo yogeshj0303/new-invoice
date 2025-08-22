@@ -978,6 +978,72 @@ class ApiService {
     }
   }
 
+  // Get Item by ID API
+  static Future<Map<String, dynamic>> getItemById(int itemId) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.items}/$itemId';
+      
+      print('🔍 [DEBUG] Get Item by ID Request:');
+      print('URL: $url');
+      print('Item ID: $itemId');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+      
+      print('📥 [DEBUG] Get Item by ID Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        return {
+          'success': true,
+          'data': data['data'],
+          ApiConstants.messageKey: data['message'] ?? 'Item fetched successfully',
+        };
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to fetch item';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          'data': null,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        'data': null,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+      };
+    }
+  }
+
   // Update Item API
   static Future<Map<String, dynamic>> updateItem({
     required int itemId,

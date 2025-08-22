@@ -4,6 +4,7 @@ import '../models/item.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
 import 'create_item_screen.dart';
+import 'item_details_screen.dart';
 
 class ItemsScreen extends StatefulWidget {
   const ItemsScreen({super.key});
@@ -891,7 +892,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // TODO: Navigate to item detail/edit screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ItemDetailsScreen(itemId: item.id),
+              ),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
