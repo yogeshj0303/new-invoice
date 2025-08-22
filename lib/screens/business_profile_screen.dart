@@ -346,7 +346,6 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
      }
 
     setState(() {});
-    
     // Debug signature state after populating form fields
     _debugSignatureState();
   }
