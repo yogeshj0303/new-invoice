@@ -917,7 +917,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               Expanded(
                 child: _buildPriceInfo(
                   'Sales Tax',
-                  pricing.salespriceTax == 1 ? 'Yes' : 'No',
+                  pricing.gst != null ? '${pricing.gst}%' : 'N/A',
                   Colors.red[700]!,
                 ),
               ),
@@ -925,7 +925,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               Expanded(
                 child: _buildPriceInfo(
                   'Purchase Tax',
-                  pricing.purchesPriceTax == 1 ? 'Yes' : 'No',
+                  pricing.gst != null ? '${pricing.gst}%' : 'N/A',
                   Colors.indigo[700]!,
                 ),
               ),
