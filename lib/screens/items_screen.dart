@@ -122,6 +122,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   Future<void> _loadItems() async {
+    print('🔄 [DEBUG] _loadItems called...');
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -131,10 +132,14 @@ class _ItemsScreenState extends State<ItemsScreen> {
       final result = await ApiService.getItems('1'); // TODO: Get actual user ID from auth service
       
       if (result['success'] == true) {
+        final items = result['items'] as List<Item>;
+        print('✅ [DEBUG] Items list loaded successfully: ${items.length} items');
+        print('🔄 [DEBUG] Setting new items list with ${items.length} items');
         setState(() {
-          _items = result['items'] as List<Item>;
+          _items = items;
           _isLoading = false;
         });
+        print('🔄 [DEBUG] Items list updated, new count: ${_items.length}');
       } else {
         setState(() {
           _hasError = true;
@@ -899,6 +904,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   itemId: item.id,
                   onItemDeleted: () {
                     // Refresh the items list when an item is deleted
+                    _loadItems();
+                  },
+                  onItemUpdated: () {
+                    // Refresh the items list when an item is updated
+                    print('🔄 [DEBUG] onItemUpdated callback called, refreshing items list...');
+                    print('🔄 [DEBUG] Current items count before refresh: ${_items.length}');
                     _loadItems();
                   },
                 ),

@@ -45,8 +45,8 @@ class BusinessProfile {
 
   factory BusinessProfile.fromJson(Map<String, dynamic> json) {
     return BusinessProfile(
-      id: json['id'] ?? 0,
-      userId: json['user_id'] ?? 0,
+      id: int.tryParse(json['id'].toString()) ?? 0,
+      userId: int.tryParse(json['user_id'].toString()) ?? 0,
       businessId: json['business_id'] ?? '',
       businessName: json['business_name'] ?? '',
       gstNo: json['gst_no'] ?? '',

@@ -1051,44 +1051,88 @@ class ApiService {
     String? itemName,
     String? unit,
     String? salesPriceAmount,
+    String? purchasePriceAmount,
+    String? mrpPrice,
+    String? gst,
     int? openingStock,
+    int? lowAlertQuantity,
+    String? lowAlertStatus,
+    String? asOfDate,
     int? itemCategoryId,
     String? itemDescription,
     String? showOnlineStore,
   }) async {
     try {
+      // Validate item ID
+      if (itemId <= 0) {
+        print('❌ [ERROR] Invalid item ID: $itemId');
+        return {
+          'success': false,
+          'item': null,
+          ApiConstants.messageKey: 'Invalid item ID',
+          ApiConstants.errorKey: 'Validation Error',
+        };
+      }
+      
+      // Build URL
       final url = '${ApiConstants.baseURL}${ApiConstants.updateItem}';
       
       print('🔄 [DEBUG] Update Item Request:');
       print('URL: $url');
-      print('Item ID: $itemId');
+      print('Item ID: $itemId (Type: ${itemId.runtimeType})');
       print('Headers: ${ApiConstants.defaultHeaders}');
       
-      // Prepare form fields (same format as create item)
-      final Map<String, String> formFields = {
-        'id': itemId.toString(),
-        'user_id': userId,
-      };
+      // Prepare form fields according to API format
+      final Map<String, String> formFields = <String, String>{};
       
-      // Add optional fields only if they are not null
+      // Add item ID and user ID first
+      formFields['id'] = itemId.toString();
+      formFields['user_id'] = userId;
+      
+      print('🔍 [DEBUG] Item ID being sent: ${formFields['id']} (Type: ${formFields['id'].runtimeType})');
+      
+      // Add basic fields
       if (itemName != null) formFields['item_name'] = itemName;
-      if (unit != null) formFields['pricings[0][unit]'] = unit;
-      if (salesPriceAmount != null) formFields['pricings[0][price]'] = salesPriceAmount;
-      if (openingStock != null) formFields['stocks[0][opening_stock]'] = openingStock.toString();
       if (itemDescription != null) formFields['item_description'] = itemDescription;
       if (showOnlineStore != null) formFields['show_online_store'] = showOnlineStore;
       if (itemCategoryId != null) formFields['item_category_id'] = itemCategoryId.toString();
       
+      // Add pricing fields
+      if (unit != null) formFields['pricings[0][unit]'] = unit;
+      if (salesPriceAmount != null) formFields['pricings[0][salesprice_amount]'] = salesPriceAmount;
+      if (purchasePriceAmount != null) formFields['pricings[0][purches_price_amount]'] = purchasePriceAmount;
+      if (mrpPrice != null) formFields['pricings[0][mrp_price]'] = mrpPrice;
+      if (gst != null) formFields['pricings[0][gst]'] = gst;
+      
+      // Add default tax values (required by API)
+      formFields['pricings[0][salesprice_tax]'] = '1';
+      formFields['pricings[0][purches_price_tax]'] = '1';
+      
+      // Add stock fields
+      if (openingStock != null) formFields['stocks[0][opening_stock]'] = openingStock.toString();
+      if (lowAlertQuantity != null) formFields['stocks[0][low_alert_quantity]'] = lowAlertQuantity.toString();
+      if (lowAlertStatus != null) formFields['stocks[0][low_alert_status]'] = lowAlertStatus;
+      if (asOfDate != null) formFields['stocks[0][as_of_date]'] = asOfDate;
+      
       print('📤 [DEBUG] Form Fields: $formFields');
+      print('📤 [DEBUG] Final URL: $url');
+      print('📤 [DEBUG] Item ID in form fields: ${formFields['id']}');
+      print('📤 [DEBUG] User ID in form fields: ${formFields['user_id']}');
 
       // Create multipart request for form data (same as create item)
       final request = http.MultipartRequest('POST', Uri.parse(url));
       
-      // Add headers
-      request.headers.addAll(ApiConstants.defaultHeaders);
+      // Add headers (remove Content-Type for multipart request as it's set automatically)
+      final headers = Map<String, String>.from(ApiConstants.defaultHeaders);
+      headers.remove('Content-Type'); // Let the multipart request set the correct content type
+      request.headers.addAll(headers);
       
       // Add form fields
       request.fields.addAll(formFields);
+      
+      print('📤 [DEBUG] Request URL: ${request.url}');
+      print('📤 [DEBUG] Request Fields: ${request.fields}');
+      print('📤 [DEBUG] Request Headers: ${request.headers}');
 
       print('📡 [DEBUG] Sending multipart request...');
       final response = await request.send();

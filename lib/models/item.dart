@@ -23,9 +23,9 @@ class Item {
 
   factory Item.fromJson(Map<String, dynamic> json) {
     return Item(
-      id: json['id'] ?? 0,
+      id: int.tryParse(json['id'].toString()) ?? 0,
       itemName: json['item_name'] ?? '',
-      userId: json['user_id'] ?? 0,
+      userId: int.tryParse(json['user_id'].toString()) ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       pricings: (json['pricings'] as List<dynamic>?)
@@ -61,8 +61,8 @@ class Item {
   double get salesPrice => pricings.isNotEmpty ? double.tryParse(pricings.first.salespriceAmount ?? '0') ?? 0.0 : 0.0;
   double get purchasePrice => pricings.isNotEmpty ? double.tryParse(pricings.first.purchesPriceAmount ?? '0') ?? 0.0 : 0.0;
   String get category => details.itemCategoryId?.toString() ?? '';
-  String get unit => pricings.isNotEmpty ? pricings.first.unit ?? '' : '';
-  int get stockQuantity => stocks.isNotEmpty ? stocks.first.openingStock ?? 0 : 0;
+  String get unit => pricings.isNotEmpty ? pricings.first.unit : '';
+  int get stockQuantity => stocks.isNotEmpty ? stocks.first.openingStock : 0;
   bool get isLowStock => stockQuantity < 10;
   bool get isOutOfStock => stockQuantity <= 0;
 
@@ -148,13 +148,13 @@ class ItemPricing {
 
   factory ItemPricing.fromJson(Map<String, dynamic> json) {
     return ItemPricing(
-      id: json['id'] ?? 0,
-      itemId: json['item_id'] ?? 0,
+      id: int.tryParse(json['id'].toString()) ?? 0,
+      itemId: int.tryParse(json['item_id'].toString()) ?? 0,
       unit: json['unit'] ?? '',
       salespriceAmount: json['salesprice_amount'],
-      salespriceTax: json['salesprice_tax'] ?? 0,
+      salespriceTax: int.tryParse(json['salesprice_tax'].toString()) ?? 0,
       purchesPriceAmount: json['purches_price_amount'],
-      purchesPriceTax: json['purches_price_tax'] ?? 0,
+      purchesPriceTax: int.tryParse(json['purches_price_tax'].toString()) ?? 0,
       mrpPrice: json['mrp_price'],
       gst: json['gst'],
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
@@ -204,13 +204,13 @@ class ItemStock {
 
   factory ItemStock.fromJson(Map<String, dynamic> json) {
     return ItemStock(
-      id: json['id'] ?? 0,
-      itemId: json['item_id'] ?? 0,
-      openingStock: json['opening_stock'] ?? 0,
+      id: int.tryParse(json['id'].toString()) ?? 0,
+      itemId: int.tryParse(json['item_id'].toString()) ?? 0,
+      openingStock: int.tryParse(json['opening_stock'].toString()) ?? 0,
       asOfDate: json['as_of_date'] != null ? DateTime.tryParse(json['as_of_date']) : null,
       itemName: json['item_name'] ?? '',
       lowAlertStatus: json['low_alert_status'] ?? 'false',
-      lowAlertQuantity: json['low_alert_quantity'],
+      lowAlertQuantity: json['low_alert_quantity'] != null ? int.tryParse(json['low_alert_quantity'].toString()) : null,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
     );
@@ -248,8 +248,8 @@ class ItemImage {
 
   factory ItemImage.fromJson(Map<String, dynamic> json) {
     return ItemImage(
-      id: json['id'] ?? 0,
-      itemId: json['item_id'] ?? 0,
+      id: int.tryParse(json['id'].toString()) ?? 0,
+      itemId: int.tryParse(json['item_id'].toString()) ?? 0,
       imagePath: json['image_path'] ?? '',
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
@@ -304,12 +304,12 @@ class ItemDetails {
     }
     
     return ItemDetails(
-      id: json['id'] ?? 0,
-      itemId: json['item_id'] ?? 0,
-      itemCategoryId: json['item_category_id'],
+      id: int.tryParse(json['id'].toString()) ?? 0,
+      itemId: int.tryParse(json['item_id'].toString()) ?? 0,
+      itemCategoryId: json['item_category_id'] != null ? int.tryParse(json['item_category_id'].toString()) : null,
       itemDescription: json['item_description'],
       showOnlineStore: showOnlineStore,
-      userId: json['user_id'] ?? 0,
+      userId: int.tryParse(json['user_id'].toString()) ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       category: json['category'] != null ? ItemCategory.fromJson(json['category']) : null, // Parse category
@@ -348,9 +348,9 @@ class ItemCategory {
 
   factory ItemCategory.fromJson(Map<String, dynamic> json) {
     return ItemCategory(
-      id: json['id'] ?? 0,
+      id: int.tryParse(json['id'].toString()) ?? 0,
       itemCategoryName: json['item_category_name'] ?? '',
-      userId: json['user_id'] ?? 0,
+      userId: int.tryParse(json['user_id'].toString()) ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
     );

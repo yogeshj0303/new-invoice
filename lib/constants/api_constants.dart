@@ -9,7 +9,8 @@ class ApiConstants {
   static const String customers = '/api/customers';
   static const String items = '/api/items';
   static const String userItems = '/api/items/user';
-  static const String updateItem = '/api/items/update';
+  // Updated to use standard RESTful endpoint
+  static const String updateItem = '/api/items';
   
   // API Headers
   static const Map<String, String> defaultHeaders = {

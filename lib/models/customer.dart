@@ -29,7 +29,7 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer(
-      id: json['id'],
+      id: json['id'] != null ? int.tryParse(json['id'].toString()) : null,
       customerName: json['customer_name'] ?? '',
       companyName: json['company_name'] ?? '',
       email: json['email'] ?? '',
@@ -40,10 +40,10 @@ class Customer {
       state: json['state'] ?? '',
       userId: json['user_id'] ?? '',
       createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
+          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
           : null,
       updatedAt: json['updated_at'] != null 
-          ? DateTime.parse(json['updated_at']) 
+          ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
           : null,
     );
   }

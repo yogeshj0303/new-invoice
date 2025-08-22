@@ -8,11 +8,13 @@ import '../constants/api_constants.dart';
 class ItemDetailsScreen extends StatefulWidget {
   final int itemId;
   final VoidCallback? onItemDeleted;
+  final VoidCallback? onItemUpdated;
 
   const ItemDetailsScreen({
     super.key,
     required this.itemId,
     this.onItemDeleted,
+    this.onItemUpdated,
   });
 
   @override
@@ -36,6 +38,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   }
 
   Future<void> _loadItemDetails() async {
+    print('🔄 [DEBUG] _loadItemDetails called for item ID: ${widget.itemId}');
     try {
       setState(() {
         _isLoading = true;
@@ -46,6 +49,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
 
       if (result['success'] == true && result['data'] != null) {
         final item = Item.fromJson(result['data']);
+        print('✅ [DEBUG] Item details loaded successfully: ${item.itemName}');
         setState(() {
           _item = item;
           _isLoading = false;
@@ -145,13 +149,27 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                 border: Border.all(color: Colors.blue[200]!, width: 0.5),
               ),
               child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditItemScreen(item: _item!),
                     ),
                   );
+                  // Refresh item details if edit was successful
+                  if (result == true) {
+                    print('🔄 [DEBUG] Item edit successful, refreshing details...');
+                    _loadItemDetails();
+                    // Notify parent that item was updated
+                    if (widget.onItemUpdated != null) {
+                      print('🔄 [DEBUG] Calling onItemUpdated callback...');
+                      widget.onItemUpdated!();
+                    } else {
+                      print('⚠️ [DEBUG] onItemUpdated callback is null');
+                    }
+                  } else {
+                    print('⚠️ [DEBUG] Item edit result: $result');
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(8),
@@ -365,14 +383,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      'ID: ${_item!.id}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                     if (_item!.details.itemDescription != null &&
                         _item!.details.itemDescription!.isNotEmpty)
                       Text(

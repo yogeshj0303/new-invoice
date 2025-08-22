@@ -24,12 +24,19 @@ class _EditItemScreenState extends State<EditItemScreen> {
   final _nameController = TextEditingController();
   final _unitController = TextEditingController();
   final _salesPriceController = TextEditingController();
+  final _purchasePriceController = TextEditingController();
+  final _mrpPriceController = TextEditingController();
+
   final _openingStockController = TextEditingController();
+  final _lowAlertQuantityController = TextEditingController();
   final _itemDescriptionController = TextEditingController();
+  final _asOfDateController = TextEditingController();
 
   String _selectedTab = 'Pricing';
   String _selectedCategory = 'Select Category';
   String _showOnlineStore = 'false';
+  String _lowAlertStatus = 'false';
+  String _selectedGst = 'None';
   bool _isLoading = false;
   String? _selectedImagePath;
   String? _existingImagePath;
@@ -59,12 +66,54 @@ class _EditItemScreenState extends State<EditItemScreen> {
       final pricing = item.pricings.first;
       _unitController.text = pricing.unit;
       _salesPriceController.text = pricing.salespriceAmount ?? '';
+      _purchasePriceController.text = pricing.purchesPriceAmount ?? '';
+      _mrpPriceController.text = pricing.mrpPrice ?? '';
+      
+      // Set GST value - convert from percentage to dropdown format
+      if (pricing.gst != null && pricing.gst!.isNotEmpty) {
+        final gstValue = pricing.gst!;
+        if (gstValue == '0' || gstValue == '0.0' || gstValue == '0.00') {
+          _selectedGst = 'GST @ 0%';
+        } else if (gstValue == '0.1' || gstValue == '0.10') {
+          _selectedGst = 'GST @ 0.1%';
+        } else if (gstValue == '0.25' || gstValue == '0.25') {
+          _selectedGst = 'GST @ 0.25%';
+        } else if (gstValue == '1' || gstValue == '1.0' || gstValue == '1.00') {
+          _selectedGst = 'GST @ 1%';
+        } else if (gstValue == '3' || gstValue == '3.0' || gstValue == '3.00') {
+          _selectedGst = 'GST @ 3%';
+        } else if (gstValue == '5' || gstValue == '5.0' || gstValue == '5.00') {
+          _selectedGst = 'GST @ 5%';
+        } else if (gstValue == '6' || gstValue == '6.0' || gstValue == '6.00') {
+          _selectedGst = 'GST @ 6%';
+        } else if (gstValue == '12' || gstValue == '12.0' || gstValue == '12.00') {
+          _selectedGst = 'GST @ 12%';
+        } else if (gstValue == '13.8' || gstValue == '13.80') {
+          _selectedGst = 'GST @ 13.8%';
+        } else if (gstValue == '14' || gstValue == '14.0' || gstValue == '14.00') {
+          _selectedGst = 'GST @ 14%';
+        } else if (gstValue == '18' || gstValue == '18.0' || gstValue == '18.00') {
+          _selectedGst = 'GST @ 18%';
+        } else if (gstValue == '28' || gstValue == '28.0' || gstValue == '28.00') {
+          _selectedGst = 'GST @ 28%';
+        } else {
+          // For other values, try to match or default to None
+          _selectedGst = 'None';
+        }
+      } else {
+        _selectedGst = 'None';
+      }
     }
     
     // Populate stock fields
     if (item.stocks.isNotEmpty) {
       final stock = item.stocks.first;
       _openingStockController.text = stock.openingStock.toString();
+      _lowAlertQuantityController.text = stock.lowAlertQuantity?.toString() ?? '';
+      _lowAlertStatus = stock.lowAlertStatus;
+      if (stock.asOfDate != null) {
+        _asOfDateController.text = '${stock.asOfDate!.year}-${stock.asOfDate!.month.toString().padLeft(2, '0')}-${stock.asOfDate!.day.toString().padLeft(2, '0')}';
+      }
     }
     
     // Populate other fields
@@ -87,8 +136,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _nameController.dispose();
     _unitController.dispose();
     _salesPriceController.dispose();
+    _purchasePriceController.dispose();
+    _mrpPriceController.dispose();
+
     _openingStockController.dispose();
+    _lowAlertQuantityController.dispose();
     _itemDescriptionController.dispose();
+    _asOfDateController.dispose();
     super.dispose();
   }
 
@@ -113,7 +167,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   const SizedBox(height: 16),
                   _buildTabBar(),
                   const SizedBox(height: 12),
-                  _buildTabContent(),
+                                     _buildTabContent(),
                 ],
               ),
             ),
@@ -160,7 +214,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       'Item Name',
       required: true,
       controller: _nameController,
-      hintText: 'Ex: Kissan Fruit Jam 500 gm',
+      hintText: 'Ex: Testing Item',
       icon: Icons.inventory_2_outlined,
     );
   }
@@ -240,8 +294,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 Expanded(
                   child: _buildCompactFormField(
                     'Unit',
+                    required: true,
                     controller: _unitController,
-                    hintText: 'PCS',
+                    hintText: 'kg',
                     icon: Icons.straighten,
                   ),
                 ),
@@ -250,10 +305,77 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   child: _buildCompactFormField(
                     'Sales Price',
                     controller: _salesPriceController,
-                    hintText: '₹ 130',
+                    hintText: '₹ 110.50',
                     keyboardType: TextInputType.number,
                     icon: Icons.attach_money,
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactFormField(
+                    'Purchase Price',
+                    controller: _purchasePriceController,
+                    hintText: '₹ 40.25',
+                    keyboardType: TextInputType.number,
+                    icon: Icons.shopping_cart,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactFormField(
+                    'MRP Price',
+                    controller: _mrpPriceController,
+                    hintText: '₹ 100.00',
+                    keyboardType: TextInputType.number,
+                    icon: Icons.tag,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactFormField(
+                    'GST',
+                    isDropdown: true,
+                    value: _selectedGst,
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedGst = value);
+                      }
+                    },
+                    items: const [
+                      'None',
+                      'Tax Exempted',
+                      'GST @ 0%',
+                      'GST @ 0.1%',
+                      'GST @ 0.25%',
+                      'GST @ 1%',
+                      'GST @ 3%',
+                      'GST @ 5%',
+                      'GST @ 6%',
+                      'GST @ 12%',
+                      'GST @ 13.8%',
+                      'GST @ 14%',
+                      'GST @ 14% + Cess @ 12%',
+                      'GST @ 18%',
+                      'GST @ 28%',
+                      'GST @ 28% + Cess @ 5%',
+                      'GST @ 28% + Cess @ 12%',
+                      'GST @ 28% + Cess @ 36%',
+                      'GST @ 28% + Cess @ 60%',
+                    ],
+                    icon: Icons.receipt_long_outlined,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(), // Empty container for spacing
                 ),
               ],
             ),
@@ -269,7 +391,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   child: _buildCompactFormField(
                     'Opening Stock',
                     controller: _openingStockController,
-                    hintText: 'Ex: 35',
+                    hintText: 'Ex: 10',
                     keyboardType: TextInputType.number,
                     icon: Icons.inventory,
                   ),
@@ -285,7 +407,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      _unitController.text.isNotEmpty ? _unitController.text : 'PCS',
+                      _unitController.text.isNotEmpty ? _unitController.text : 'kg',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF666666),
@@ -295,6 +417,40 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactFormField(
+                    'Low Alert Quantity',
+                    controller: _lowAlertQuantityController,
+                    hintText: 'Ex: 2',
+                    keyboardType: TextInputType.number,
+                    icon: Icons.warning,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCompactFormField(
+                    'As of Date',
+                    controller: _asOfDateController,
+                    hintText: 'YYYY-MM-DD',
+                    icon: Icons.calendar_today,
+                    suffix: IconButton(
+                      icon: const Icon(Icons.calendar_today, size: 16),
+                      onPressed: () => _selectDate(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildCompactSwitchTile(
+              'Low Stock Alert',
+              Icons.notifications_active,
+              _lowAlertStatus == 'true',
+              (value) => setState(() => _lowAlertStatus = value ? 'true' : 'false'),
             ),
           ],
         );
@@ -701,6 +857,128 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
   }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        _asOfDateController.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
+  bool _validateForm() {
+    // Validate required fields
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item name is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    if (_unitController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unit is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    // Validate numeric fields
+    if (_salesPriceController.text.trim().isNotEmpty) {
+      if (double.tryParse(_salesPriceController.text.trim()) == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid sales price'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
+    if (_purchasePriceController.text.trim().isNotEmpty) {
+      if (double.tryParse(_purchasePriceController.text.trim()) == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid purchase price'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
+    if (_mrpPriceController.text.trim().isNotEmpty) {
+      if (double.tryParse(_mrpPriceController.text.trim()) == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid MRP price'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
+    // GST validation not needed for dropdown as it always has a valid value
+
+    // Validate stock fields
+    if (_openingStockController.text.trim().isNotEmpty) {
+      if (int.tryParse(_openingStockController.text.trim()) == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid opening stock quantity'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
+    if (_lowAlertQuantityController.text.trim().isNotEmpty) {
+      if (int.tryParse(_lowAlertQuantityController.text.trim()) == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid low alert quantity'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
+    // Validate date format if provided
+    if (_asOfDateController.text.trim().isNotEmpty) {
+      try {
+        DateTime.parse(_asOfDateController.text.trim());
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid date in YYYY-MM-DD format'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
+
+
 
   Future<void> _loadCategories() async {
     setState(() {
@@ -1157,7 +1435,18 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   void _updateItem() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _validateForm()) {
+      // Validate item exists and has valid ID
+      if (widget.item.id <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid item ID. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
       setState(() {
         _isLoading = true;
       });
@@ -1178,13 +1467,47 @@ class _EditItemScreenState extends State<EditItemScreen> {
           categoryId = selectedCategory['id'] as int?;
         }
 
+        // Debug: Log the item ID being sent
+        print('🔍 [DEBUG] Edit Item Screen - Item ID: ${widget.item.id} (Type: ${widget.item.id.runtimeType})');
+        print('🔍 [DEBUG] Edit Item Screen - User ID: ${widget.item.userId} (Type: ${widget.item.userId.runtimeType})');
+        
+        // Debug: Log the data being sent
+        print('🔍 [DEBUG] Edit Item Screen - Data being sent:');
+        print('  - Item Name: ${_nameController.text.trim()}');
+        print('  - Unit: ${_unitController.text.trim()}');
+        print('  - Sales Price: ${_salesPriceController.text.trim()}');
+        print('  - Purchase Price: ${_purchasePriceController.text.trim()}');
+        print('  - MRP: ${_mrpPriceController.text.trim()}');
+        print('  - GST: $_selectedGst');
+        print('  - Opening Stock: ${_openingStockController.text.trim()}');
+        print('  - Low Alert Quantity: ${_lowAlertQuantityController.text.trim()}');
+        print('  - Low Alert Status: $_lowAlertStatus');
+        print('  - As of Date: ${_asOfDateController.text.trim()}');
+        print('  - Item Description: ${_itemDescriptionController.text.trim()}');
+        print('  - Show Online Store: $_showOnlineStore');
+        print('  - Category ID: $categoryId');
+        
+        // Debug: Show what the API will receive
+        print('🔍 [DEBUG] API Request Summary:');
+        print('  - Endpoint: ${ApiConstants.baseURL}${ApiConstants.updateItem}');
+        print('  - Method: POST');
+        print('  - Item ID: ${widget.item.id}');
+        print('  - User ID: ${widget.item.userId}');
+        print('  - Form Data: Multipart form data with fields and values');
+        
         final result = await ApiService.updateItem(
           itemId: widget.item.id,
           userId: widget.item.userId.toString(),
           itemName: _nameController.text.trim(),
           unit: _unitController.text.trim().isNotEmpty ? _unitController.text.trim() : null,
           salesPriceAmount: _salesPriceController.text.trim().isNotEmpty ? _salesPriceController.text.trim() : null,
+          purchasePriceAmount: _purchasePriceController.text.trim().isNotEmpty ? _purchasePriceController.text.trim() : null,
+          mrpPrice: _mrpPriceController.text.trim().isNotEmpty ? _mrpPriceController.text.trim() : null,
+          gst: _extractGstPercentage(_selectedGst),
           openingStock: _openingStockController.text.trim().isNotEmpty ? int.tryParse(_openingStockController.text.trim()) : null,
+          lowAlertQuantity: _lowAlertQuantityController.text.trim().isNotEmpty ? int.tryParse(_lowAlertQuantityController.text.trim()) : null,
+          lowAlertStatus: _lowAlertStatus,
+          asOfDate: _asOfDateController.text.trim().isNotEmpty ? _asOfDateController.text.trim() : null,
           itemDescription: _itemDescriptionController.text.trim().isNotEmpty ? _itemDescriptionController.text.trim() : null,
           showOnlineStore: _showOnlineStore,
           itemCategoryId: categoryId,
@@ -1229,5 +1552,28 @@ class _EditItemScreenState extends State<EditItemScreen> {
         }
       }
     }
+  }
+
+  /// Extracts the GST percentage value from the dropdown selection
+  String? _extractGstPercentage(String selectedGst) {
+    if (selectedGst == 'None' || selectedGst == 'Tax Exempted') {
+      return null;
+    }
+    
+    // Handle different GST formats
+    if (selectedGst.startsWith('GST @ ')) {
+      // Extract the main GST percentage
+      final gstMatch = RegExp(r'GST @ ([\d.]+)%').firstMatch(selectedGst);
+      if (gstMatch != null) {
+        return gstMatch.group(1);
+      }
+    }
+    
+    // Handle legacy format (e.g., "5%")
+    if (selectedGst.contains('%')) {
+      return selectedGst.replaceAll('%', '');
+    }
+    
+    return null;
   }
 }
