@@ -38,7 +38,7 @@ class Customer {
       gstTreatment: json['gst_treatment'] ?? '',
       placeOfSupply: json['place_of_supply'] ?? '',
       state: json['state'] ?? '',
-      userId: json['user_id'] ?? '',
+      userId: json['user_id']?.toString() ?? '',
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
           : null,

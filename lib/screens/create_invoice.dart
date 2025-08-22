@@ -63,6 +63,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // API call state
   bool _isCreatingInvoice = false;
 
+  // Customer search state
+  List<Customer> _customers = [];
+  bool _isLoadingCustomers = false;
+  bool _isCustomerDropdownOpen = false;
+  final TextEditingController _customerSearchController = TextEditingController();
+  Customer? _selectedCustomer;
+
   // Theme colors matching the app
   static const Color primaryColor = Color(0xFF2E3085); // App's blue
   static const Color secondaryColor = Color(0xFF4E4AA8); // App's lighter blue
@@ -72,12 +79,32 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   @override
   void initState() {
     super.initState();
+    
     // Initialize items with cart data if available
     if (widget.cartItems != null && widget.cartItems!.isNotEmpty) {
       items = List.from(widget.cartItems!);
     } else {
       items = [];
     }
+    
+    // Set default dates
+    final now = DateTime.now();
+    invoiceDateController.text = DateFormat('dd/MM/yyyy').format(now);
+    dueDateController.text = DateFormat('dd/MM/yyyy').format(now.add(Duration(days: 30)));
+    
+    // Serial number is already initialized with default value '1'
+    
+    // Add listener to customer name controller to detect manual typing
+    customerNameController.addListener(() {
+      if (customerNameController.text.isNotEmpty && _selectedCustomer != null) {
+        setState(() {
+          _selectedCustomer = null;
+        });
+      }
+    });
+    
+    // Automatically fetch customers when screen loads
+    _fetchCustomers();
   }
   
   // Check if keyboard is visible
@@ -185,8 +212,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       final itemTax = itemTotal * gstValue / 100;
       totalTax += itemTax;
       
-      // Debug logging for GST values
-      print('🔍 [DEBUG] Item: ${item['name']}, GST: ${item['gst']}, GST Value: $gstValue, Tax: $itemTax');
+
     }
     return totalTax;
   }
@@ -340,6 +366,86 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
    
+  // Customer search methods
+  Future<void> _fetchCustomers() async {
+    if (_isLoadingCustomers) {
+      return;
+    }
+    
+    setState(() {
+      _isLoadingCustomers = true;
+    });
+    
+    try {
+      final result = await ApiService.getCustomers();
+      
+      if (result[ApiConstants.successKey] == true) {
+        final customersList = result['customers'] ?? [];
+        setState(() {
+          _customers = customersList;
+          _isLoadingCustomers = false;
+        });
+      } else {
+        setState(() {
+          _customers = [];
+          _isLoadingCustomers = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result[ApiConstants.messageKey] ?? 'Failed to load customers'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _customers = [];
+        _isLoadingCustomers = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading customers: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _onCustomerSelected(Customer customer) {
+    setState(() {
+      _selectedCustomer = customer;
+      customerNameController.text = customer.customerName;
+      phoneController.text = customer.phone;
+      _isCustomerDropdownOpen = false;
+    });
+  }
+
+  void _clearCustomerSelection() {
+    setState(() {
+      _selectedCustomer = null;
+      customerNameController.clear();
+      phoneController.clear();
+      _isCustomerDropdownOpen = false;
+    });
+  }
+
+  void _enableManualEntry() {
+    setState(() {
+      _isCustomerDropdownOpen = false;
+      _selectedCustomer = null;
+    });
+  }
+
+  List<Customer> _getFilteredCustomers() {
+    if (customerNameController.text.isEmpty) {
+      return _customers;
+    }
+    return _customers.where((customer) =>
+        customer.customerName.toLowerCase().contains(customerNameController.text.toLowerCase()) ||
+        customer.companyName.toLowerCase().contains(customerNameController.text.toLowerCase())
+    ).toList();
+  }
+   
        @override
     void dispose() {
       itemController.dispose();
@@ -358,16 +464,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       invoiceDateController.dispose();
       dueDateController.dispose();
       serialNumberController.dispose();
+      _customerSearchController.dispose();
       super.dispose();
     }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
+         return Scaffold(
+       backgroundColor: backgroundColor,
+       resizeToAvoidBottomInset: true,
+       appBar: AppBar(
         centerTitle: true,
         leading: Container(
           margin: EdgeInsets.all(8),
@@ -725,8 +832,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                  padding: const EdgeInsets.all(12.0),
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                                           Row(
+                   children: [                                           Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
@@ -890,6 +996,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
              ),
              SizedBox(height: 12),
 
+
+
                          // Customer Information Section
              Container(
                decoration: BoxDecoration(
@@ -908,100 +1016,247 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
+                                           Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            color: primaryColor,
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Customer Information',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Spacer(),
+                        ],
+                      ),
+                     SizedBox(height: 10),
                      Row(
                        children: [
-                         Icon(
-                           Icons.person_outline,
-                           color: primaryColor,
-                           size: 16,
+                         Expanded(
+                           child: SizedBox(
+                             height: 40,
+                             child: Focus(
+                               onFocusChange: (hasFocus) {
+                                 if (hasFocus) {
+                                   setState(() {
+                                     _isCustomerDropdownOpen = true;
+                                   });
+                                 }
+                               },
+                               child: TextField(
+                                 controller: customerNameController,
+                                 decoration: InputDecoration(
+                                   labelText: 'Customer Name',
+                                   labelStyle: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                   prefixIcon: Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                                   border: OutlineInputBorder(
+                                     borderRadius: BorderRadius.circular(6),
+                                     borderSide: BorderSide(color: Colors.grey[300]!),
+                                   ),
+                                   enabledBorder: OutlineInputBorder(
+                                     borderRadius: BorderRadius.circular(6),
+                                     borderSide: BorderSide(color: Colors.grey[300]!),
+                                   ),
+                                   focusedBorder: OutlineInputBorder(
+                                     borderRadius: BorderRadius.circular(6),
+                                     borderSide: BorderSide(color: primaryColor, width: 1.5),
+                                   ),
+                                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                   filled: true,
+                                   fillColor: Colors.grey[50],
+                                   isDense: true,
+                                   constraints: BoxConstraints(maxHeight: 40),
+                                 ),
+                                 style: TextStyle(fontSize: 12, color: Colors.black87),
+                                 onChanged: (value) {
+                                   setState(() {
+                                     // Filter customers based on search text
+                                     _isCustomerDropdownOpen = true;
+                                   });
+                                 },
+                                 onTap: () {
+                                   setState(() {
+                                     _isCustomerDropdownOpen = true;
+                                   });
+                                 },
+                               ),
+                             ),
+                           ),
                          ),
-                         SizedBox(width: 6),
-                         Text(
-                           'Customer Information',
-                           style: theme.textTheme.titleMedium?.copyWith(
-                             fontWeight: FontWeight.w600,
-                             color: Colors.black87,
-                             fontSize: 13,
+                         SizedBox(width: 8),
+                         Expanded(
+                           child: SizedBox(
+                             height: 40,
+                             child: TextField(
+                               controller: phoneController,
+                               keyboardType: TextInputType.phone,
+                               maxLength: 10,
+                               onChanged: (value) {
+                                 if (value.length == 10) {
+                                   FocusScope.of(context).unfocus();
+                                 }
+                               },
+                               decoration: InputDecoration(
+                                 labelText: 'Phone Number',
+                                 labelStyle: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                 prefixIcon: Icon(Icons.phone, size: 16, color: Colors.grey[600]),
+                                 border: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(6),
+                                   borderSide: BorderSide(color: Colors.grey[300]!),
+                                 ),
+                                 enabledBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(6),
+                                   borderSide: BorderSide(color: Colors.grey[300]!),
+                                 ),
+                                 focusedBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(6),
+                                   borderSide: BorderSide(color: primaryColor, width: 1.5),
+                                 ),
+                                 contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                 filled: true,
+                                 fillColor: Colors.grey[50],
+                                 isDense: true,
+                                 constraints: BoxConstraints(maxHeight: 40),
+                                 counterText: '', // Hide the character counter
+                               ),
+                               style: TextStyle(fontSize: 12, color: Colors.black87),
+                             ),
                            ),
                          ),
                        ],
                      ),
-                     SizedBox(height: 10),
-                                           Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 40,
-                              child: TextField(
-                                controller: customerNameController,
-                                                                                                  decoration: InputDecoration(
-                                    labelText: 'Customer Name',
-                                    labelStyle: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                                    prefixIcon: Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                      borderSide: BorderSide(color: Colors.grey[300]!),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                      borderSide: BorderSide(color: Colors.grey[300]!),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                      borderSide: BorderSide(color: primaryColor, width: 1.5),
-                                    ),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                    filled: true,
-                                    fillColor: Colors.grey[50],
-                                    isDense: true,
-                                    constraints: BoxConstraints(maxHeight: 40),
-                                  ),
-                                 style: TextStyle(fontSize: 12, color: Colors.black87),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: SizedBox(
-                              height: 40,
-                                                             child: TextField(
-                                 controller: phoneController,
-                                 keyboardType: TextInputType.phone,
-                                 maxLength: 10,
-                                 onChanged: (value) {
-                                   if (value.length == 10) {
-                                     FocusScope.of(context).unfocus();
-                                   }
-                                 },
-                                 decoration: InputDecoration(
-                                     labelText: 'Phone Number',
-                                     labelStyle: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                                     prefixIcon: Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                                     border: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(6),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     enabledBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(6),
-                                       borderSide: BorderSide(color: Colors.grey[300]!),
-                                     ),
-                                     focusedBorder: OutlineInputBorder(
-                                       borderRadius: BorderRadius.circular(6),
-                                       borderSide: BorderSide(color: primaryColor, width: 1.5),
-                                     ),
-                                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                     filled: true,
-                                     fillColor: Colors.grey[50],
-                                     isDense: true,
-                                     constraints: BoxConstraints(maxHeight: 40),
-                                     counterText: '', // Hide the character counter
-                                   ),
-                                  style: TextStyle(fontSize: 12, color: Colors.black87),
+
+                     // Customer dropdown list
+                     if (_isCustomerDropdownOpen) ...[
+
+                       SizedBox(height: 8),
+
+
+                       Container(
+                         constraints: BoxConstraints(maxHeight: 200),
+                         decoration: BoxDecoration(
+                           color: Colors.white,
+                           borderRadius: BorderRadius.circular(6),
+                           border: Border.all(color: Colors.grey[300]!),
+                           boxShadow: [
+                             BoxShadow(
+                               color: Colors.black.withOpacity(0.1),
+                               blurRadius: 4,
+                               offset: Offset(0, 2),
+                             ),
+                           ],
+                         ),
+                         child: Column(
+                           children: [
+                             // Customer list
+                             Expanded(
+                               child: _isLoadingCustomers
+                                   ? Center(
+                                       child: Padding(
+                                         padding: EdgeInsets.all(16),
+                                         child: CircularProgressIndicator(
+                                           strokeWidth: 2,
+                                           valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                         ),
+                                       ),
+                                     )
+                                   : _getFilteredCustomers().isEmpty
+                                       ? Center(
+                                           child: Padding(
+                                             padding: EdgeInsets.all(16),
+                                             child: Column(
+                                               mainAxisSize: MainAxisSize.min,
+                                               children: [
+                                                 Text(
+                                                   'No customers found',
+                                                   style: TextStyle(
+                                                     fontSize: 11,
+                                                     color: Colors.grey[500],
+                                                   ),
+                                                 ),
+                                               ],
+                                             ),
+                                           ),
+                                         )
+                                       : ListView.builder(
+                                           shrinkWrap: true,
+                                           itemCount: _getFilteredCustomers().length,
+                                           itemBuilder: (context, index) {
+                                             final customer = _getFilteredCustomers()[index];
+                                             return ListTile(
+                                               dense: true,
+                                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                               title: Text(
+                                                 customer.customerName,
+                                                 style: TextStyle(
+                                                   fontSize: 12,
+                                                   fontWeight: FontWeight.w500,
+                                                   color: Colors.black87,
+                                                 ),
+                                               ),
+                                               subtitle: Text(
+                                                 customer.companyName.isNotEmpty ? customer.companyName : customer.phone,
+                                                 style: TextStyle(
+                                                   fontSize: 10,
+                                                   color: Colors.grey[600],
+                                                 ),
+                                               ),
+                                               onTap: () => _onCustomerSelected(customer),
+                                               trailing: Icon(
+                                                 Icons.arrow_forward_ios,
+                                                 size: 12,
+                                                 color: Colors.grey[400],
+                                               ),
+                                             );
+                                           },
+                                         ),
+                             ),
+                             // Manual entry option
+                             Container(
+                               padding: EdgeInsets.all(8),
+                               decoration: BoxDecoration(
+                                 color: Colors.grey[50],
+                                 border: Border(
+                                   top: BorderSide(color: Colors.grey[200]!),
+                                 ),
                                ),
-                            ),
-                          ),
-                        ],
-                      ),
+                               child: Row(
+                                 children: [
+                                   Icon(Icons.edit, size: 14, color: Colors.grey[600]),
+                                   SizedBox(width: 8),
+                                   Expanded(
+                                     child: Text(
+                                       'Or type customer name manually',
+                                       style: TextStyle(
+                                         fontSize: 10,
+                                         color: Colors.grey[600],
+                                       ),
+                                     ),
+                                   ),
+                                   TextButton(
+                                     onPressed: _enableManualEntry,
+                                     child: Text(
+                                       'Enter Manually',
+                                       style: TextStyle(
+                                         fontSize: 10,
+                                         color: primaryColor,
+                                         fontWeight: FontWeight.w500,
+                                       ),
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                             ),
+                           ],
+                         ),
+                       ),
+                     ],
                    ],
                  ),
                ),
@@ -1202,12 +1457,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                  ),
                ),
              ),
-             SizedBox(height: 12),
-
-
-
-                         // Security Footer
-             Container(
+                           SizedBox(height: 12),
+              
+              // Add extra padding at bottom to prevent keyboard overlap
+              SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 100 : 20),
+ 
+ 
+                          // Security Footer
+              Container(
                padding: EdgeInsets.all(12),
                child: Row(
                  mainAxisAlignment: MainAxisAlignment.center,
@@ -1829,9 +2086,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       }
 
   void _editItem(Map<String, dynamic> item) async {
-    // Debug logging for GST values
-    print('🔍 [DEBUG] Editing item: ${item['name']}, GST: ${item['gst']}');
-    
     // Get actual user ID from auth service
     final userId = await AuthUtils.getCurrentUserId();
     if (userId == null) {
@@ -2819,14 +3073,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void _saveInvoiceLocally(Map<String, dynamic> invoiceData) {
     // TODO: Implement local storage for offline access
     // This could use SharedPreferences, Hive, or SQLite
-    print('💾 [DEBUG] Saving invoice locally: ${invoiceData['id']}');
+
   }
 
   // Share Invoice (placeholder for future implementation)
   void _shareInvoice(Map<String, dynamic> invoiceData) {
     // TODO: Implement sharing functionality
     // This could use the share_plus package or other sharing methods
-    print('📤 [DEBUG] Sharing invoice: ${invoiceData['id']}');
+
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2842,7 +3096,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void _printInvoice(Map<String, dynamic> invoiceData) {
     // TODO: Implement printing functionality
     // This could use the printing package or other printing methods
-    print('🖨️ [DEBUG] Printing invoice: ${invoiceData['id']}');
+
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2858,7 +3112,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void _exportInvoice(Map<String, dynamic> invoiceData) {
     // TODO: Implement export functionality
     // This could export to PDF, Excel, or other formats
-    print('📄 [DEBUG] Exporting invoice: ${invoiceData['id']}');
+
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2907,9 +3161,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return true;
   }
 
-
-
- 
 }
 
 

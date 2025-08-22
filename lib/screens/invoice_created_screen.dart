@@ -566,7 +566,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                                             ),
                                           ),
                                           child: Text(
-                                            'TAX',
+                                            'GST',
                                             style: TextStyle(
                                               fontSize: 7,
                                               fontWeight: FontWeight.bold,
@@ -603,8 +603,9 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                                   final index = entry.key;
                                   final item = entry.value;
                                   final itemTotal = item['qty'] * item['price'];
-                                  final itemTax =
-                                      itemTotal * (item['taxRate'] ?? 0) / 100;
+                                  // Use GST value if available, otherwise fallback to taxRate
+                                  final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+                                  final itemTax = itemTotal * gstValue / 100;
                                   final itemTotalWithTax = itemTotal + itemTax;
 
                                   return Container(
@@ -742,7 +743,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                                               ),
                                             ),
                                             child: Text(
-                                              'Rs. ${_formatPrice(itemTax)} (${(item['taxRate'] ?? 0).toStringAsFixed(1)}%)',
+                                              'Rs. ${_formatPrice(itemTax)} (${_getItemGSTRate(item).toStringAsFixed(1)}%)',
                                               style: TextStyle(
                                                 fontSize: 6,
                                                 color: Colors.black87,
@@ -982,237 +983,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                             ),
                           ],
 
-                          // Ultra-Compact Summary Section
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: Colors.grey[300]!,
-                                  width: 0.3,
-                                ),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Summary Rows - Ultra-Compact
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Subtotal:',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    Text(
-                                      'Rs. ${_formatPrice(_calculateSubtotal())}',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (widget.discount > 0) ...[
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Discount:',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        '- Rs. ${_formatPrice(widget.discount)}',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.red[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                const SizedBox(height: 2),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Tax (${_getTaxRate().toStringAsFixed(1)}%):',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    Text(
-                                      'Rs. ${_formatPrice(_calculateTotalTax())}',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (widget.additionalCharges.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Additional Charges:',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        'Rs. ${_formatPrice(widget.additionalChargesTotal)}',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                if (widget.roundoff != 0) ...[
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Roundoff (Decimal):',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        widget.roundoff > 0
-                                            ? '+ Rs. ${_formatPrice(widget.roundoff)}'
-                                            : '- Rs. ${_formatPrice(widget.roundoff * -1)}',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color:
-                                              widget.roundoff > 0
-                                                  ? Colors.green[600]
-                                                  : Colors.red[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                const SizedBox(height: 2),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: Colors.grey[300]!,
-                                        width: 0.3,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'TOTAL:',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Rs. ${_formatPrice(_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff)}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (widget.amountReceived > 0) ...[
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'RECEIVED:',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        'Rs. ${_formatPrice(widget.amountReceived)}',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 1),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'BALANCE:',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        'Rs. ${_formatPrice(widget.amountReceived - (_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff))}',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-
-                          // Ultra-Compact Tax Breakdown
+                          // Ultra-Compact GST Breakdown
                           Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
@@ -1282,7 +1053,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                                             'Taxable Value',
                                             style: TextStyle(
                                               fontSize: 7,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w600,
                                               color: Colors.grey[800],
                                             ),
                                             textAlign: TextAlign.center,
@@ -1349,7 +1120,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                                             vertical: 4,
                                           ),
                                           child: Text(
-                                            'Total Tax',
+                                            'Total GST',
                                             style: TextStyle(
                                               fontSize: 7,
                                               fontWeight: FontWeight.bold,
@@ -1528,6 +1299,212 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                             ),
                           ),
 
+                          // Ultra-Compact Summary Section
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Colors.grey[300]!,
+                                  width: 0.3,
+                                ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                 // Summary Rows - Ultra-Compact
+                                 Row(
+                                   mainAxisAlignment:
+                                       MainAxisAlignment.spaceBetween,
+                                   children: [
+                                     Text(
+                                       'Subtotal:',
+                                       style: TextStyle(
+                                         fontSize: 9,
+                                         fontWeight: FontWeight.w600,
+                                         color: Colors.grey[700],
+                                       ),
+                                     ),
+                                     Text(
+                                       'Rs. ${_formatPrice(_calculateSubtotal())}',
+                                       style: TextStyle(
+                                         fontSize: 9,
+                                         fontWeight: FontWeight.w600,
+                                         color: Colors.black87,
+                                       ),
+                                     ),
+                                   ],
+                                 ),
+                                 if (widget.additionalCharges.isNotEmpty) ...[
+                                   const SizedBox(height: 2),
+                                   Row(
+                                     mainAxisAlignment:
+                                         MainAxisAlignment.spaceBetween,
+                                     children: [
+                                       Text(
+                                         'Additional Charges:',
+                                         style: TextStyle(
+                                           fontSize: 9,
+                                           fontWeight: FontWeight.w600,
+                                           color: Colors.grey[700],
+                                         ),
+                                       ),
+                                       Text(
+                                         'Rs. ${_formatPrice(widget.additionalChargesTotal)}',
+                                         style: TextStyle(
+                                           fontSize: 9,
+                                           fontWeight: FontWeight.w600,
+                                           color: Colors.black87,
+                                         ),
+                                       ),
+                                     ],
+                                   ),
+                                 ],
+                                 if (widget.discount > 0) ...[
+                                   const SizedBox(height: 2),
+                                   Row(
+                                     mainAxisAlignment:
+                                         MainAxisAlignment.spaceBetween,
+                                     children: [
+                                       Text(
+                                         'Discount:',
+                                         style: TextStyle(
+                                           fontSize: 9,
+                                           fontWeight: FontWeight.w600,
+                                           color: Colors.grey[700],
+                                         ),
+                                       ),
+                                       Text(
+                                         '- Rs. ${_formatPrice(widget.discount)}',
+                                         style: TextStyle(
+                                           fontSize: 9,
+                                           fontWeight: FontWeight.w600,
+                                           color: Colors.red[600],
+                                         ),
+                                       ),
+                                     ],
+                                   ),
+                                 ],
+                                 if (widget.roundoff != 0) ...[
+                                   const SizedBox(height: 2),
+                                   Row(
+                                     mainAxisAlignment:
+                                         MainAxisAlignment.spaceBetween,
+                                     children: [
+                                       Text(
+                                         'Roundoff (Decimal):',
+                                         style: TextStyle(
+                                           fontSize: 9,
+                                           fontWeight: FontWeight.w600,
+                                           color: Colors.grey[700],
+                                         ),
+                                       ),
+                                       Text(
+                                         widget.roundoff > 0
+                                             ? '+ Rs. ${_formatPrice(widget.roundoff)}'
+                                             : '- Rs. ${_formatPrice(widget.roundoff * -1)}',
+                                         style: TextStyle(
+                                           fontSize: 9,
+                                           fontWeight: FontWeight.w600,
+                                           color:
+                                               widget.roundoff > 0
+                                                   ? Colors.green[600]
+                                                   : Colors.red[600],
+                                         ),
+                                       ),
+                                     ],
+                                   ),
+                                 ],
+                                const SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: Colors.grey[300]!,
+                                        width: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'TOTAL:',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Rs. ${_formatPrice(_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (widget.amountReceived > 0) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'RECEIVED:',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Text(
+                                        'Rs. ${_formatPrice(widget.amountReceived)}',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'BALANCE:',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Text(
+                                        'Rs. ${_formatPrice(widget.amountReceived - (_calculateSubtotal() - widget.discount + _calculateTotalTax() + widget.additionalChargesTotal + widget.roundoff))}',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                           // Ultra-Compact Amount in Words
                           Container(
                             width: double.infinity,
@@ -1811,7 +1788,10 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
     double totalTax = 0;
     for (var item in widget.items) {
       final itemTotal = item['qty'] * item['price'];
-      final itemTax = itemTotal * (item['taxRate'] ?? 0) / 100;
+      // Use GST value if available, otherwise fallback to taxRate
+      // This matches the calculation logic in create_invoice.dart
+      final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+      final itemTax = itemTotal * gstValue / 100;
       totalTax += itemTax;
     }
     return totalTax;
@@ -1819,8 +1799,17 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
 
   double _getTaxRate() {
     if (widget.items.isEmpty) return 0;
-    // Get the tax rate from the first item, assuming all items have the same tax rate
-    return widget.items.first['taxRate'] ?? 0;
+    // Get the GST rate from the first item, assuming all items have the same GST rate
+    // This matches the logic in create_invoice.dart where GST is the primary tax field
+    final gstValue = widget.items.first['gst'] != null ? double.tryParse(widget.items.first['gst'].toString()) ?? 0.0 : 0.0;
+    return gstValue > 0 ? gstValue : (widget.items.first['taxRate'] ?? 0);
+  }
+
+  double _getItemGSTRate(Map<String, dynamic> item) {
+    // Get the GST rate for a specific item
+    // This matches the logic in create_invoice.dart where GST is the primary tax field
+    final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+    return gstValue > 0 ? gstValue : (item['taxRate'] ?? 0);
   }
 
   String _formatPrice(double price) {
@@ -2197,7 +2186,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                         pw.Padding(
                           padding: const pw.EdgeInsets.all(8),
                           child: pw.Text(
-                            'Tax',
+                            'GST',
                             style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: pdfColor),
                           ),
                         ),
@@ -2215,7 +2204,9 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                       final index = entry.key;
                       final item = entry.value;
                       final itemTotal = item['qty'] * item['price'];
-                      final itemTax = itemTotal * (item['taxRate'] ?? 0) / 100;
+                      // Use GST value if available, otherwise fallback to taxRate
+                      final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+                      final itemTax = itemTotal * gstValue / 100;
                       final itemTotalWithTax = itemTotal + itemTax;
 
                       return pw.TableRow(
@@ -2278,31 +2269,12 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                           ),
                         ],
                       ),
-                      if (widget.discount > 0) ...[
-                        pw.SizedBox(height: 10),
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: [
-                            pw.Text(
-                              'Discount:',
-                              style: pw.TextStyle(fontSize: 16),
-                            ),
-                            pw.Text(
-                              '- Rs. ${_formatPrice(widget.discount)}',
-                              style: pw.TextStyle(
-                                fontSize: 16,
-                                color: PdfColors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                       pw.SizedBox(height: 10),
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
                           pw.Text(
-                            'Tax (${_getTaxRate().toStringAsFixed(1)}%):',
+                            'GST (${_getTaxRate().toStringAsFixed(1)}%):',
                             style: pw.TextStyle(fontSize: 16),
                           ),
                           pw.Text(
@@ -2323,6 +2295,25 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                             pw.Text(
                               'Rs. ${_formatPrice(widget.additionalChargesTotal)}',
                               style: pw.TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (widget.discount > 0) ...[
+                        pw.SizedBox(height: 10),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              'Discount:',
+                              style: pw.TextStyle(fontSize: 16),
+                            ),
+                            pw.Text(
+                              '- Rs. ${_formatPrice(widget.discount)}',
+                              style: pw.TextStyle(
+                                fontSize: 16,
+                                color: PdfColors.red,
+                              ),
                             ),
                           ],
                         ),

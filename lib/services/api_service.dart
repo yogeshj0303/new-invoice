@@ -631,15 +631,15 @@ class ApiService {
     try {
       // Use provided userId or get current user ID
       final currentUserId = userId ?? await getCurrentUserId();
-      if (currentUserId == null) {
-        return {
-          'success': false,
-          ApiConstants.messageKey: 'User not authenticated',
-          'customers': [],
-        };
-      }
       
-      final url = '${ApiConstants.baseURL}${ApiConstants.customers}?user_id=$currentUserId';
+      // Build URL - try with user_id first, then without if user_id is null
+      String url;
+      if (currentUserId != null) {
+        url = '${ApiConstants.baseURL}${ApiConstants.customers}?user_id=$currentUserId';
+      } else {
+        url = '${ApiConstants.baseURL}${ApiConstants.customers}';
+        print('⚠️ [DEBUG] No user ID available, calling API without user_id parameter');
+      }
       
       print('🔍 [DEBUG] Get Customers Request:');
       print('URL: $url');
@@ -663,26 +663,44 @@ class ApiService {
           List<Customer> customers = [];
           try {
             if (data['data'] != null && data['data'] is List) {
+              print('🔍 [DEBUG] Data field is a list with ${(data['data'] as List).length} items');
+              print('🔍 [DEBUG] First item in data: ${(data['data'] as List).isNotEmpty ? (data['data'] as List).first : 'empty list'}');
+              
               customers = (data['data'] as List)
-                  .map((customerJson) => Customer.fromJson(customerJson))
+                  .map((customerJson) {
+                    print('🔍 [DEBUG] Parsing customer JSON: $customerJson');
+                    try {
+                      final customer = Customer.fromJson(customerJson);
+                      print('🔍 [DEBUG] Successfully parsed customer: ${customer.customerName}');
+                      return customer;
+                    } catch (e) {
+                      print('⚠️ [DEBUG] Error parsing individual customer: $e');
+                      print('⚠️ [DEBUG] Customer JSON: $customerJson');
+                      rethrow;
+                    }
+                  })
                   .toList();
               print('✅ [DEBUG] Successfully parsed ${customers.length} customers from response');
             } else {
               print('⚠️ [DEBUG] No data field in response or data is not a list');
+              print('⚠️ [DEBUG] Data field type: ${data['data']?.runtimeType}');
+              print('⚠️ [DEBUG] Data field value: ${data['data']}');
             }
           } catch (parseError) {
             print('⚠️ [DEBUG] Error parsing customers from response: $parseError');
+            print('⚠️ [DEBUG] Parse error stack trace: ${StackTrace.current}');
             customers = [];
           }
           
           return {
-            'success': true,
+            ApiConstants.successKey: true,
             ApiConstants.messageKey: data['message'] ?? 'Customers loaded successfully',
             'customers': customers,
           };
         } else {
+          print('❌ [DEBUG] API returned status false: ${data['message']}');
           return {
-            'success': false,
+            ApiConstants.successKey: false,
             ApiConstants.messageKey: data['message'] ?? 'Failed to load customers',
             'customers': [],
           };
@@ -700,13 +718,13 @@ class ApiService {
         } else if (errorData.containsKey('error')) {
           errorMessage = errorData['error'];
         } else if (errorData.containsKey('detail')) {
-          errorMessage = errorData['detail'];
+          errorMessage = errorData['msg'];
         } else if (errorData.containsKey('msg')) {
           errorMessage = errorData['msg'];
         }
         
         return {
-          'success': false,
+          ApiConstants.successKey: false,
           ApiConstants.messageKey: errorMessage,
           ApiConstants.errorKey: 'HTTP ${response.statusCode}',
           'customers': [],
@@ -717,7 +735,7 @@ class ApiService {
       print('💥 [DEBUG] Exception type: ${e.runtimeType}');
       print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
       return {
-        'success': false,
+        ApiConstants.successKey: false,
         ApiConstants.messageKey: 'Network error: ${e.toString()}',
         ApiConstants.errorKey: 'Exception',
         'customers': [],

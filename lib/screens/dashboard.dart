@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'calculator_screen.dart';
 import '../services/api_service.dart';
 import '../models/transaction.dart';
+import '../models/business_profile.dart';
 import '../constants/api_constants.dart';
 
 // Placeholder for other screens
@@ -24,10 +25,54 @@ class _HomeDashboardState extends State<HomeDashboard> {
   bool _isLoadingTransactions = false;
   String? _transactionError;
 
+  // Business profile data
+  BusinessProfile? _businessProfile;
+  bool _isLoadingBusinessProfile = false;
+  String? _businessProfileError;
+
   @override
   void initState() {
     super.initState();
     _loadTransactions();
+    _loadBusinessProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh business profile when dependencies change (e.g., user logs in/out)
+    if (_businessProfile == null && !_isLoadingBusinessProfile) {
+      _loadBusinessProfile();
+    }
+  }
+
+  // Load business profile from API
+  Future<void> _loadBusinessProfile() async {
+    setState(() {
+      _isLoadingBusinessProfile = true;
+      _businessProfileError = null;
+    });
+
+    try {
+      final result = await ApiService.getBusinessProfile();
+      
+      if (result['success'] == true) {
+        setState(() {
+          _businessProfile = result['businessProfile'];
+          _isLoadingBusinessProfile = false;
+        });
+      } else {
+        setState(() {
+          _businessProfileError = result[ApiConstants.messageKey] ?? 'Failed to load business profile';
+          _isLoadingBusinessProfile = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _businessProfileError = 'Error loading business profile: $e';
+        _isLoadingBusinessProfile = false;
+      });
+    }
   }
 
   // Load transactions from API
@@ -59,6 +104,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
+  // Get business name to display
+  String _getBusinessName() {
+    if (_isLoadingBusinessProfile) {
+      return 'Loading...';
+    }
+    if (_businessProfileError != null) {
+      return 'Business Name';
+    }
+    if (_businessProfile != null && _businessProfile!.businessName.isNotEmpty) {
+      // Truncate long business names to fit in the app bar
+      final name = _businessProfile!.businessName;
+      if (name.length > 20) {
+        return '${name.substring(0, 17)}...';
+      }
+      return name;
+    }
+    return 'Business Name';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width > 600;
@@ -71,27 +135,51 @@ class _HomeDashboardState extends State<HomeDashboard> {
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: false,
-          title: GestureDetector(
-            onTap: () => _showBusinessBottomSheet(context),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'BusinessName',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    letterSpacing: 0.1,
-                    color: primaryColor,
-                    fontFamily:
-                        GoogleFonts.openSansTextTheme(
-                          Theme.of(context).textTheme,
-                        ).bodyMedium?.fontFamily,
+          title: Tooltip(
+            message: 'Tap to change business • Long press to refresh',
+            child: GestureDetector(
+              onTap: () => _showBusinessBottomSheet(context),
+              onLongPress: () {
+                // Long press to refresh business profile
+                _loadBusinessProfile();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Refreshing business profile...'),
+                    duration: Duration(seconds: 2),
                   ),
-                ),
-                SizedBox(width: 4),
-                Icon(Icons.keyboard_arrow_down, color: primaryColor, size: 20),
-              ],
+                );
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isLoadingBusinessProfile) ...[
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: primaryColor,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                  ],
+                  Text(
+                    _getBusinessName(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      letterSpacing: 0.1,
+                      color: primaryColor,
+                      fontFamily:
+                          GoogleFonts.openSansTextTheme(
+                            Theme.of(context).textTheme,
+                          ).bodyMedium?.fontFamily,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down, color: primaryColor, size: 20),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -139,7 +227,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _loadTransactions,
+        onRefresh: () async {
+          await Future.wait([
+            _loadTransactions(),
+            _loadBusinessProfile(),
+          ]);
+        },
         color: primaryColor,
         child: SingleChildScrollView(
           child: Padding(
@@ -552,7 +645,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _BusinessBottomSheet(),
+      builder: (context) => _BusinessBottomSheet(
+        businessProfile: _businessProfile,
+        isLoading: _isLoadingBusinessProfile,
+        error: _businessProfileError,
+        onRefresh: _loadBusinessProfile,
+      ),
     );
   }
 
@@ -968,6 +1066,18 @@ class _CompactDashboardCard extends StatelessWidget {
 }
 
 class _BusinessBottomSheet extends StatelessWidget {
+  final BusinessProfile? businessProfile;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onRefresh;
+
+  const _BusinessBottomSheet({
+    this.businessProfile,
+    this.isLoading = false,
+    this.error,
+    required this.onRefresh,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1026,65 +1136,205 @@ class _BusinessBottomSheet extends StatelessWidget {
             ),
           ),
           SizedBox(height: 12),
-          // Business list
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.green[600],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'B',
+          
+          // Business list or loading/error state
+          if (isLoading)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF2E3085)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Loading business profile...',
                         style: TextStyle(
-                          color: Colors.white,
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else if (error != null)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red[600],
+                      size: 24,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Failed to load business profile',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      error!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: onRefresh,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF2E3085),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: Text(
+                        'Retry',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (businessProfile != null)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.green[600],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Center(
+                        child: Text(
+                          businessProfile!.businessName.isNotEmpty 
+                              ? businessProfile!.businessName[0].toUpperCase()
+                              : 'B',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Business Name',
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            businessProfile!.businessName.isNotEmpty 
+                                ? businessProfile!.businessName
+                                : 'Business Name',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          if (businessProfile!.businessCategory.isNotEmpty) ...[
+                            SizedBox(height: 2),
+                            Text(
+                              businessProfile!.businessCategory,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // TODO: Navigate to edit business profile
+                        Navigator.pushNamed(context, '/business-profile');
+                      },
+                      child: Text(
+                        'EDIT',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2E3085),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.business,
+                      color: Colors.blue[600],
+                      size: 24,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'No Business Profile Found',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to edit business
-                    },
-                    child: Text(
-                      'EDIT',
-                      style: TextStyle(
-                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF2E3085),
+                        color: Colors.blue[700],
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: 4),
+                    Text(
+                      'Create your first business profile to get started',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          
           SizedBox(height: 12),
           // Add new business button
           Padding(

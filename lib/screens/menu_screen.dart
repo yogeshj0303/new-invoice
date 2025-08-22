@@ -956,14 +956,6 @@ class _MenuScreenState extends State<MenuScreen> {
                 Icons.delete_outline,
                 () {},
               ),
-              const Divider(height: 1, color: Color(0xFFE9ECEF)),
-              _buildSettingsListTile(
-                'Logout',
-                Icons.logout,
-                () {
-                  _handleLogout();
-                },
-              ),
             ],
           ),
         ),

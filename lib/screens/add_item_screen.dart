@@ -708,12 +708,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                               color: Color(0xFF666666),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Colors.grey[500],
-                            size: 14,
-                          ),
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -1068,7 +1062,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       },
                       child: Center(
                         child: Text(
-                          'Generate Bill',
+                          'Save ',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
