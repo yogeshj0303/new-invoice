@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:invoice_app/screens/gst_settings_screen.dart';
 
 class InvoiceSettingsScreen extends StatelessWidget {
   const InvoiceSettingsScreen({super.key});
@@ -21,17 +22,10 @@ class InvoiceSettingsScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.grey[50],
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.grey[200]!,
-              width: 1,
-            ),
+            border: Border.all(color: Colors.grey[200]!, width: 1),
           ),
           child: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: primaryColor,
-              size: 18,
-            ),
+            icon: Icon(Icons.arrow_back, color: primaryColor, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             style: IconButton.styleFrom(
               padding: const EdgeInsets.all(8),
@@ -51,10 +45,7 @@ class InvoiceSettingsScreen extends StatelessWidget {
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: borderColor,
-          ),
+          child: Container(height: 1, color: borderColor),
         ),
       ),
       body: SafeArea(
@@ -135,10 +126,7 @@ class InvoiceSettingsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: borderColor,
-                      width: 1,
-                    ),
+                    border: Border.all(color: borderColor, width: 1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -158,26 +146,36 @@ class InvoiceSettingsScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'GST e-Invoice & e-Way Bill',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const GSTSettingsScreen(),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Generate compliant GST documents',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                            );
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'GST e-Invoice & e-Way Bill',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                'Generate compliant GST documents',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       Icon(
@@ -193,10 +191,7 @@ class InvoiceSettingsScreen extends StatelessWidget {
                 // Settings Section
                 Container(
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: borderColor,
-                      width: 1,
-                    ),
+                    border: Border.all(color: borderColor, width: 1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Column(
@@ -267,11 +262,7 @@ class InvoiceSettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: primaryColor,
-              size: 18,
-            ),
+            Icon(icon, color: primaryColor, size: 18),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -297,14 +288,10 @@ class InvoiceSettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: primaryColor,
-              size: 12,
-            ),
+            Icon(Icons.arrow_forward_ios, color: primaryColor, size: 12),
           ],
         ),
       ),
     );
   }
-} 
+}
