@@ -279,10 +279,19 @@ class ApiService {
         } else {
           return {
             'success': false,
+            'notFound': true, // Special indicator for when profile doesn't exist
             ApiConstants.messageKey: 'No business profile found',
             'businessProfile': null,
           };
         }
+      } else if (response.statusCode == 404) {
+        // Handle 404 specifically - business profile doesn't exist
+        return {
+          'success': false,
+          'notFound': true, // Special indicator for 404 errors
+          ApiConstants.messageKey: 'Business profile not found. You can create one below.',
+          'businessProfile': null,
+        };
       } else {
         return {
           'success': false,

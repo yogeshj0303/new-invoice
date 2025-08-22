@@ -134,6 +134,24 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         WidgetsBinding.instance.addPostFrameCallback((_) {
           setState(() {});
         });
+      } else if (result['notFound'] == true) {
+        // Handle 404 - show form with empty fields for creating new profile
+        setState(() {
+          _businessProfile = null;
+        });
+        
+        // Clear form fields to show empty form
+        _clearFormFields();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Business profile not found. You can create one below.'),
+              backgroundColor: Colors.blue,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       } else {
         setState(() {
           _businessProfile = null;
@@ -368,6 +386,37 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     _debugSignatureState();
   }
 
+  // Clear form fields to show empty form for creating new profile
+  void _clearFormFields() {
+    print('🔍 [DEBUG] Clearing form fields for new profile creation');
+    
+    // Clear all text controllers
+    _businessNameController.clear();
+    _businessIdController.clear();
+    _gstinController.clear();
+    _phone1Controller.clear();
+    _phone2Controller.clear();
+    _emailController.clear();
+    _businessEmailController.clear();
+    _businessAddressController.clear();
+    _pincodeController.clear();
+    _businessDescriptionController.clear();
+    _websiteController.clear();
+    
+    // Reset dropdown selections
+    _selectedState = null;
+    _selectedBusinessType = null;
+    _selectedBusinessCategory = null;
+    
+    // Reset signature states
+    _hasSignature = false;
+    _hasBusinessSignature = false;
+    _signaturePath = null;
+    _businessSignaturePath = null;
+    
+    print('✅ [DEBUG] Form fields cleared successfully');
+  }
+
   // Map API state values to dropdown options
   String? _mapStateValue(String apiState) {
     print('🔍 [DEBUG] Mapping state value: "$apiState"');
@@ -521,9 +570,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         appBar: _buildAppBar(),
         body: _isLoadingProfile 
           ? _buildLoadingBody() 
-          : _businessProfile == null 
-            ? _buildNoProfileBody()
-            : _buildBody(),
+          : _buildBody(), // Always show the form body, whether profile exists or not
       ),
     );
   }
@@ -572,7 +619,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         ),
       ),
       title: Text(
-        'Business Profile',
+        _businessProfile == null ? 'Create Business Profile' : 'Business Profile',
         style: TextStyle(
           color: const Color(0xFF1A1A1A),
           fontSize: 17,
@@ -616,6 +663,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     return SafeArea(
       child: Column(
         children: [
+          // Show header message when creating new profile
+          if (_businessProfile == null) _buildCreateProfileHeader(),
           _buildTabBar(),
           Expanded(
             child: IndexedStack(
@@ -631,63 +680,52 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     );
   }
 
-  Widget _buildNoProfileBody() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.business_outlined,
-                size: 64,
-                color: Colors.grey[400],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No Business Profile Found',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'It looks like you don\'t have a business profile yet. Please contact support to create one.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadBusinessProfile,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+  Widget _buildCreateProfileHeader() {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue[200]!, width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Colors.blue[700],
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Create Your Business Profile',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue[800],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  'Fill in the details below to set up your business profile. You can edit this information later.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue[700],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+
 
 
   Widget _buildTabBar() {
@@ -824,7 +862,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       children: [
         _buildTextField(
           controller: _businessNameController,
-          hint: 'Enter business name',
+          hint: _businessProfile == null ? 'Enter your business name (e.g., ABC Company)' : 'Enter business name',
           label: 'Business Name',
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -837,14 +875,14 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Business ID',
           controller: _businessIdController,
-          hint: 'Business ID (Auto-generated)',
+          hint: _businessProfile == null ? 'Will be auto-generated after creation' : 'Business ID (Auto-generated)',
           enabled: false,
         ),
         const SizedBox(height: 12),
         _buildTextField(
           label: 'GSTIN',
           controller: _gstinController,
-          hint: 'Enter GSTIN number',
+          hint: _businessProfile == null ? 'Enter your 15-digit GSTIN (e.g., 22AAAAA0000A1Z5)' : 'Enter GSTIN number',
           textCapitalization: TextCapitalization.characters,
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -864,7 +902,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Primary Phone Number',
           controller: _phone1Controller,
-          hint: 'Enter primary phone number',
+          hint: _businessProfile == null ? 'Enter your primary business phone number' : 'Enter primary phone number',
           keyboardType: TextInputType.phone,
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -877,14 +915,14 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Secondary Phone Number (Optional)',
           controller: _phone2Controller,
-          hint: 'Enter secondary phone number',
+          hint: _businessProfile == null ? 'Enter secondary phone number if available' : 'Enter secondary phone number',
           keyboardType: TextInputType.phone,
         ),
         const SizedBox(height: 12),
         _buildTextField(
           label: 'Email Address',
           controller: _emailController,
-          hint: 'Enter email address',
+          hint: _businessProfile == null ? 'Enter your business email address' : 'Enter email address',
           keyboardType: TextInputType.emailAddress,
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -900,7 +938,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Business Email (Optional)',
           controller: _businessEmailController,
-          hint: 'Enter business email address',
+          hint: _businessProfile == null ? 'Enter separate business email if different' : 'Enter business email address',
           keyboardType: TextInputType.emailAddress,
         ),
       ],
@@ -914,7 +952,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Business Address',
           controller: _businessAddressController,
-          hint: 'Enter complete business address',
+          hint: _businessProfile == null ? 'Enter your complete business address' : 'Enter complete business address',
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Business address is required';
@@ -926,7 +964,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Pincode',
           controller: _pincodeController,
-          hint: 'Enter pincode',
+          hint: _businessProfile == null ? 'Enter 6-digit pincode' : 'Enter pincode',
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           validator: (value) {
@@ -943,7 +981,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Business Description',
           controller: _businessDescriptionController,
-          hint: 'Describe your business activities',
+          hint: _businessProfile == null ? 'Describe what your business does (e.g., We provide IT services...)' : 'Describe your business activities',
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Business description is required';
@@ -963,7 +1001,18 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('Digital Signature', Icons.draw),
-        const SizedBox(height: 8),
+        if (_businessProfile == null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Add your digital signature for invoices and documents',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Container(
           width: double.infinity,
           height: 120,
@@ -1026,7 +1075,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
                       Icon(Icons.draw, color: Colors.grey[400], size: 32),
                       const SizedBox(height: 8),
                       Text(
-                        'Create or upload your signature',
+                        _businessProfile == null 
+                          ? 'Create or upload your digital signature'
+                          : 'Create or upload your signature',
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                     ],
@@ -1449,7 +1500,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
               _selectedState = value;
             });
           },
-          hint: 'Select State',
+          hint: _businessProfile == null ? 'Select the state where your business operates' : 'Select State',
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'State is required';
@@ -1479,7 +1530,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
               _selectedBusinessType = value;
             });
           },
-          hint: 'Select Business Type',
+          hint: _businessProfile == null ? 'Select your business structure type' : 'Select Business Type',
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Business type is required';
@@ -1517,7 +1568,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
               _selectedBusinessCategory = value;
             });
           },
-          hint: 'Select Business Category',
+          hint: _businessProfile == null ? 'Select the category that best describes your business' : 'Select Business Category',
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Business category is required';
@@ -1529,7 +1580,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         _buildTextField(
           label: 'Website (Optional)',
           controller: _websiteController,
-          hint: 'Enter website URL',
+          hint: _businessProfile == null ? 'Enter your business website URL if you have one' : 'Enter website URL',
           keyboardType: TextInputType.url,
         ),
       ],
@@ -1644,7 +1695,18 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('Business Signature', Icons.draw),
-        const SizedBox(height: 8),
+        if (_businessProfile == null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Add your business signature for official documents',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Container(
           width: double.infinity,
           height: 120,
@@ -1707,7 +1769,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
                       Icon(Icons.draw, color: Colors.grey[400], size: 32),
                       const SizedBox(height: 8),
                       Text(
-                        'Create or upload business signature',
+                        _businessProfile == null
+                          ? 'Create or upload business signature'
+                          : 'Create or upload business signature',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 13,
@@ -2293,7 +2357,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
     });
 
     try {
-      print('🔍 [DEBUG] Starting business profile update...');
+      print('🔍 [DEBUG] Starting business profile ${_businessProfile == null ? 'creation' : 'update'}...');
       print('🔍 [DEBUG] Form validation passed successfully');
       
       // Map dropdown values back to API format
@@ -2321,7 +2385,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       print('   Digital Signature Path: $_signaturePath');
       print('   Business Signature Path: $_businessSignaturePath');
 
-      // Call the update API
+      // Call the update API (it handles both create and update)
       print('🔍 [DEBUG] Calling ApiService.updateBusinessProfile...');
       final result = await ApiService.updateBusinessProfile(
         userId: 1, // For now, using user_id = 1 as per the API example
@@ -2347,7 +2411,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       print('🔍 [DEBUG] Result keys: ${result.keys.toList()}');
 
       if (result['success'] == true) {
-        print('✅ [DEBUG] Business profile updated successfully');
+        print('✅ [DEBUG] Business profile ${_businessProfile == null ? 'created' : 'updated'} successfully');
         
         // Update the local business profile with the response data
         if (result['businessProfile'] != null) {
@@ -2362,7 +2426,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result[ApiConstants.messageKey] ?? 'Business profile updated successfully!'),
+              content: Text(
+                _businessProfile == null 
+                  ? 'Business profile created successfully!' 
+                  : (result[ApiConstants.messageKey] ?? 'Business profile updated successfully!')
+              ),
               backgroundColor: Colors.green,
               duration: const Duration(seconds: 3),
             ),
@@ -2373,12 +2441,14 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
           _refreshBusinessProfile();
         }
       } else {
-        print('❌ [DEBUG] Failed to update business profile: ${result[ApiConstants.messageKey]}');
+        print('❌ [DEBUG] Failed to ${_businessProfile == null ? 'create' : 'update'} business profile: ${result[ApiConstants.messageKey]}');
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result[ApiConstants.messageKey] ?? 'Failed to update profile. Please try again.'),
+              content: Text(
+                result[ApiConstants.messageKey] ?? 'Failed to ${_businessProfile == null ? 'create' : 'update'} profile. Please try again.'
+              ),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 4),
             ),
@@ -2386,14 +2456,14 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         }
       }
     } catch (e) {
-      print('💥 [ERROR] Exception during profile update: $e');
+      print('💥 [ERROR] Exception during profile ${_businessProfile == null ? 'creation' : 'update'}: $e');
       print('💥 [ERROR] Exception type: ${e.runtimeType}');
       print('💥 [ERROR] Stack trace: ${StackTrace.current}');
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update profile: ${e.toString()}'),
+            content: Text('Failed to ${_businessProfile == null ? 'create' : 'update'} profile: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
           ),
@@ -2404,7 +2474,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         setState(() {
           _isLoading = false;
         });
-        print('🔍 [DEBUG] Profile update completed, loading state set to false');
+        print('🔍 [DEBUG] Profile ${_businessProfile == null ? 'creation' : 'update'} completed, loading state set to false');
       }
     }
   }
