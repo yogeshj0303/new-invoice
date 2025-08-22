@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:invoice_app/screens/gst_settings_screen.dart';
+import 'package:invoice_app/screens/invoice_phone_settings_screen.dart';
 
 class InvoiceSettingsScreen extends StatelessWidget {
   const InvoiceSettingsScreen({super.key});
@@ -208,11 +209,19 @@ class InvoiceSettingsScreen extends StatelessWidget {
                         description: 'Set prefix and sequence',
                       ),
                       const Divider(height: 1, color: borderColor),
-                      _buildSettingItem(
-                        icon: Icons.phone_outlined,
-                        title: 'Contact Information',
-                        description: 'Phone & email display',
-                      ),
+                                             _buildSettingItem(
+                         icon: Icons.phone_outlined,
+                         title: 'Contact Information',
+                         description: 'Phone & email display',
+                         onTap: () {
+                           Navigator.push(
+                             context,
+                             MaterialPageRoute(
+                               builder: (context) => const InvoicePhoneSettingsScreen(),
+                             ),
+                           );
+                         },
+                       ),
                       const Divider(height: 1, color: borderColor),
                       _buildSettingItem(
                         icon: Icons.description_outlined,
@@ -253,11 +262,10 @@ class InvoiceSettingsScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required String description,
+    VoidCallback? onTap,
   }) {
     return InkWell(
-      onTap: () {
-        // TODO: Navigate to specific setting
-      },
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
