@@ -1842,7 +1842,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       minChildSize: 0.5,
       maxChildSize: 0.9,
       builder: (context, scrollController) {
-        return EditBottomSheetContent(item: item);
+        return EditBottomSheetContent(
+          item: item,
+          onItemUpdated: null, // No callback needed in invoice context
+        );
       },
     );
   }

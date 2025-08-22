@@ -730,7 +730,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
       minChildSize: 0.5,
       maxChildSize: 0.9,
       builder: (context, scrollController) {
-        return EditBottomSheetContent(item: item);
+        return EditBottomSheetContent(
+          item: item,
+          onItemUpdated: () {
+            // Refresh the items list when an item is updated
+            print('🔄 [DEBUG] AddItemScreen: Item updated via bottom sheet, refreshing items...');
+            _loadItems();
+          },
+        );
       },
     );
   }

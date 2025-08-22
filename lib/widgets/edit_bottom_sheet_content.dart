@@ -5,8 +5,13 @@ import '../constants/api_constants.dart';
 
 class EditBottomSheetContent extends StatefulWidget {
   final Item item;
+  final VoidCallback? onItemUpdated;
 
-  const EditBottomSheetContent({super.key, required this.item});
+  const EditBottomSheetContent({
+    super.key, 
+    required this.item,
+    this.onItemUpdated,
+  });
 
   @override
   State<EditBottomSheetContent> createState() => _EditBottomSheetContentState();
@@ -55,6 +60,7 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
   Future<void> _saveChanges() async {
     if (_isLoading) return;
 
+    print('🔄 [DEBUG] EditBottomSheet: Starting to save changes...');
     setState(() {
       _isLoading = true;
     });
@@ -112,6 +118,8 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
       );
 
       if (result['success'] == true) {
+        print('✅ [DEBUG] EditBottomSheet: Item updated successfully via API');
+        
         // Show success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -120,6 +128,14 @@ class _EditBottomSheetContentState extends State<EditBottomSheetContent> {
               backgroundColor: Colors.green,
             ),
           );
+        }
+        
+        // Notify parent that item was updated
+        if (widget.onItemUpdated != null) {
+          print('🔄 [DEBUG] EditBottomSheet: Calling onItemUpdated callback...');
+          widget.onItemUpdated!();
+        } else {
+          print('⚠️ [DEBUG] EditBottomSheet: onItemUpdated callback is null');
         }
         
         // Close the bottom sheet and return the updated item

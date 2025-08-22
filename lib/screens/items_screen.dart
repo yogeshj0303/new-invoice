@@ -135,11 +135,13 @@ class _ItemsScreenState extends State<ItemsScreen> {
         final items = result['items'] as List<Item>;
         print('✅ [DEBUG] Items list loaded successfully: ${items.length} items');
         print('🔄 [DEBUG] Setting new items list with ${items.length} items');
+        print('🔄 [DEBUG] Previous items count: ${_items.length}');
         setState(() {
           _items = items;
           _isLoading = false;
         });
         print('🔄 [DEBUG] Items list updated, new count: ${_items.length}');
+        print('🔄 [DEBUG] Triggering rebuild...');
       } else {
         setState(() {
           _hasError = true;
@@ -209,7 +211,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('🔄 [DEBUG] ItemsScreen build method called');
     final filteredItems = _getFilteredItems();
+    print('🔄 [DEBUG] Build method: filteredItems count = ${filteredItems.length}');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFBFC),
@@ -1510,6 +1514,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   List<Item> _getFilteredItems() {
+    print('🔄 [DEBUG] _getFilteredItems called with ${_items.length} items');
     List<Item> filteredItems = List.from(_items);
 
     // Apply search filter
@@ -1594,6 +1599,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
         break;
     }
 
+    print('🔄 [DEBUG] _getFilteredItems returning ${filteredItems.length} filtered items');
     return filteredItems;
   }
 

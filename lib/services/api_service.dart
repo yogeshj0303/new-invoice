@@ -1085,6 +1085,7 @@ class ApiService {
       // Prepare form fields according to API format
       final Map<String, String> formFields = <String, String>{};
       
+      
       // Add item ID and user ID first
       formFields['id'] = itemId.toString();
       formFields['user_id'] = userId;
