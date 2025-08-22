@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:invoice_app/models/item.dart';
 import 'package:invoice_app/widgets/edit_bottom_sheet_content.dart';
+import 'package:invoice_app/services/api_service.dart';
+import 'package:invoice_app/constants/api_constants.dart';
 import 'invoice_created_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
@@ -53,6 +55,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   
   // Items section state
   bool isItemsExpanded = true; // Default to expanded
+  
+  // API call state
+  bool _isCreatingInvoice = false;
 
   // Theme colors matching the app
   static const Color primaryColor = Color(0xFF2E3085); // App's blue
@@ -69,6 +74,33 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     } else {
       items = [];
     }
+  }
+  
+  // Check if keyboard is visible
+  bool _isKeyboardVisible(BuildContext context) {
+    return MediaQuery.of(context).viewInsets.bottom > 0;
+  }
+  
+  // Scroll to focused field when keyboard appears
+  void _scrollToFocusedField(ScrollController scrollController) {
+    if (_isKeyboardVisible(context)) {
+      Future.delayed(Duration(milliseconds: 300), () {
+        if (scrollController.hasClients) {
+          scrollController.animateTo(
+            scrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
+  
+  // Handle keyboard visibility changes
+  void _onKeyboardVisibilityChanged() {
+    setState(() {
+      // Trigger rebuild when keyboard visibility changes
+    });
   }
 
   double get subtotal =>
@@ -324,6 +356,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: backgroundColor,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         centerTitle: true,
         leading: Container(
@@ -1096,64 +1129,70 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
              SizedBox(height: 16),
 
                          // Generate Bill Button
-             Container(
+             SizedBox(
                width: double.infinity,
-               height: 48,
-               decoration: BoxDecoration(
-                 color: items.isEmpty ? Colors.grey[400] : primaryColor,
-                 borderRadius: BorderRadius.circular(8),
-                 boxShadow: items.isEmpty ? [] : [
-                   BoxShadow(
-                     color: primaryColor.withOpacity(0.3),
-                     blurRadius: 6,
-                     offset: Offset(0, 1),
-                   ),
-                 ],
-               ),
-               child: Material(
-                 color: Colors.transparent,
-                 child: InkWell(
+               child: Container(
+                 height: 48,
+                 decoration: BoxDecoration(
+                   color: (items.isEmpty || _isCreatingInvoice) ? Colors.grey[400] : primaryColor,
                    borderRadius: BorderRadius.circular(8),
-                   onTap: items.isEmpty ? null : () {
-                     // Navigate to invoice created screen
-                     Navigator.push(
-                       context,
-                       MaterialPageRoute(
-                         builder: (context) => InvoiceCreatedScreen(
-                           items: items,
-                           subtotal: subtotal, 
-                           discount: discount,
-                           tax: tax,
-                           additionalCharges: additionalCharges,
-                           additionalChargesTotal: additionalChargesTotal,
-                           roundoff: _calculateRoundoff(),
-                           total: total,
-                           invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
-                           date: DateTime.now(),
-                           customerName: customerNameController.text,
-                           customerPhone: phoneController.text,
-                           notes: notesController.text,
-                           paymentType: paymentType,
-                           amountReceived: double.tryParse(amountReceivedController.text) ?? 0,
-                         ),
-                       ),
-                     );
-                   },
-                   child: Center(
-                     child: Text(
-                       items.isEmpty ? 'Add Items to Generate Bill' : 'Generate Bill',
-                       style: theme.textTheme.titleMedium?.copyWith(
-                         fontWeight: FontWeight.w600,
-                         color: Colors.white,
-                         letterSpacing: 0.2,
-                         fontSize: 16,
-                       ),
+                   boxShadow: (items.isEmpty || _isCreatingInvoice) ? [] : [
+                     BoxShadow(
+                       color: primaryColor.withOpacity(0.3),
+                       blurRadius: 6,
+                       offset: Offset(0, 1),
+                     ),
+                   ],
+                 ),
+                 child: Material(
+                   color: Colors.transparent,
+                   child: InkWell(
+                     borderRadius: BorderRadius.circular(8),
+                     onTap: (items.isEmpty || _isCreatingInvoice) ? null : () async {
+                       await _createInvoice();
+                     },
+                     child: Center(
+                       child: _isCreatingInvoice 
+                         ? Row(
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               SizedBox(
+                                 width: 16,
+                                 height: 16,
+                                 child: CircularProgressIndicator(
+                                   strokeWidth: 2,
+                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                 ),
+                               ),
+                               SizedBox(width: 8),
+                               Text(
+                                 'Creating Invoice...',
+                                 style: theme.textTheme.titleMedium?.copyWith(
+                                   fontWeight: FontWeight.w600,
+                                   color: Colors.white,
+                                   letterSpacing: 0.2,
+                                   fontSize: 16,
+                                 ),
+                               ),
+                             ],
+                           )
+                         : Text(
+                             items.isEmpty ? 'Add Items to Generate Bill' : 'Generate Bill',
+                             style: theme.textTheme.titleMedium?.copyWith(
+                               fontWeight: FontWeight.w600,
+                               color: Colors.white,
+                               letterSpacing: 0.2,
+                               fontSize: 16,
+                             ),
+                           ),
                      ),
                    ),
                  ),
                ),
              ),
              SizedBox(height: 12),
+
+
 
                          // Security Footer
              Container(
@@ -1855,131 +1894,150 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      useSafeArea: true,
       builder: (BuildContext context) {
-        return _buildEditInvoiceBottomSheet();
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: _buildEditInvoiceBottomSheet(),
+        );
       },
     );
   }
 
-    Widget _buildEditInvoiceBottomSheet() {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.5,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            margin: EdgeInsets.only(top: 8),
-            width: 32,
-            height: 3,
-            decoration: BoxDecoration(
-              color: Colors.grey[400],
-              borderRadius: BorderRadius.circular(2),
-            ),
+  Widget _buildEditInvoiceBottomSheet() {
+    return DraggableScrollableSheet(
+      initialChildSize: _isKeyboardVisible(context) ? 0.8 : 0.6,
+      minChildSize: _isKeyboardVisible(context) ? 0.6 : 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          // Header
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Edit Invoice Details',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: EdgeInsets.only(top: 8),
+                width: 32,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Edit Invoice Details',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close, color: Colors.grey[600], size: 18),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Invoice Date
+                      _buildCompactDateField(
+                        'Invoice Date',
+                        invoiceDateController,
+                        Icons.calendar_today,
+                        () => _selectDate(context, invoiceDateController),
+                      ),
+                      SizedBox(height: 16),
+                      
+                      // Due Date
+                      _buildCompactDropdownField(
+                        'Due Date',
+                        dueDateController,
+                        Icons.calendar_today,
+                      ),
+                      SizedBox(height: 6),
+                      
+                      // Starting Serial Number
+                      _buildCompactTextField(
+                        'Starting Serial Number',
+                        serialNumberController,
+                        Icons.numbers,
+                      ),
+                      SizedBox(height: 6),
+                      
+                      // Hint text
+                      Text(
+                        '(Ex: 1, 2, 3..)',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 11,
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      
+                      // Add extra padding at bottom to ensure content is not hidden behind keyboard
+                      SizedBox(height: _isKeyboardVisible(context) ? 120 : 20),
+                    ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: Colors.grey[600], size: 18),
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(minWidth: 28, minHeight: 28),
-                ),
-              ],
-            ),
-          ),
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Invoice Date
-                  _buildCompactDateField(
-                    'Invoice Date',
-                    invoiceDateController,
-                    Icons.calendar_today,
-                    () => _selectDate(context, invoiceDateController),
-                  ),
-                  SizedBox(height: 16),
-                  
-                                     // Due Date
-                   _buildCompactDropdownField(
-                     'Due Date',
-                     dueDateController,
-                     Icons.calendar_today,
-                   ),
-                   SizedBox(height: 6),
-                  
-                  // Starting Serial Number
-                  _buildCompactTextField(
-                    'Starting Serial Number',
-                    serialNumberController,
-                    Icons.numbers,
-                  ),
-                  SizedBox(height: 6),
-                  
-                  // Hint text
-                  Text(
-                    '(Ex: 1, 2, 3..)',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 11,
+              ),
+              // Save Button
+              Container(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'SAVE CHANGES',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-          // Save Button
-          Container(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() {});
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'SAVE CHANGES',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -2113,19 +2171,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           child: Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: controller,
-                  style: TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey[50]!),
-                      borderRadius: BorderRadius.circular(6),
+                child: Focus(
+                  onFocusChange: (hasFocus) {
+                    if (hasFocus) {
+                      // Trigger rebuild when focus changes to handle keyboard
+                      setState(() {});
+                    }
+                  },
+                  child: TextField(
+                    controller: controller,
+                    style: TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey[50]!),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      border: InputBorder.none,
+                      hintText: 'Enter $label',
+                      hintStyle: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    border: InputBorder.none,
-                    hintText: 'Enter $label',
-                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
@@ -2392,147 +2458,419 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return months[monthName] ?? 1;
   }
 
- 
-}
+  // Create Invoice Method
+  Future<void> _createInvoice() async {
+    // Set loading state
+    setState(() {
+      _isCreatingInvoice = true;
+    });
 
-class InvoicePreviewScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Example data for preview
-    final items = [
-      {'name': 'Paneer Tikka', 'qty': 2, 'price': 250.0},
-      {'name': 'Butter Naan', 'qty': 4, 'price': 60.0},
-      {'name': 'Lassi', 'qty': 2, 'price': 80.0},
-    ];
-    final subtotal = 250.0 * 2 + 60.0 * 4 + 80.0 * 2;
-    final discount = 50.0;
-    final tax = 60.0;
-    final total = subtotal - discount + tax;
-    final invoiceNumber = 'INV-20250801-001';
-    final date = DateTime.now();
+    try {
+      // Validate required fields
+      if (customerNameController.text.isEmpty) {
+        setState(() {
+          _isCreatingInvoice = false;
+        });
+        _showErrorDialog('Customer name is required');
+        return;
+      }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Invoice Preview',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
+      if (phoneController.text.isEmpty) {
+        setState(() {
+          _isCreatingInvoice = false;
+        });
+        _showErrorDialog('Phone number is required');
+        return;
+      }
+
+      if (phoneController.text.length != 10) {
+        setState(() {
+          _isCreatingInvoice = false;
+        });
+        _showErrorDialog('Phone number must be 10 digits');
+        return;
+      }
+
+      if (items.isEmpty) {
+        setState(() {
+          _isCreatingInvoice = false;
+        });
+        _showErrorDialog('Please add at least one item to create an invoice');
+        return;
+      }
+
+      // Validate amount received
+      final amountReceivedValue = double.tryParse(amountReceivedController.text) ?? total;
+      if (amountReceivedValue < total) {
+        setState(() {
+          _isCreatingInvoice = false;
+        });
+        _showErrorDialog('Amount received cannot be less than total amount');
+        return;
+      }
+
+      // Prepare data for API call
+      final userId = "1"; // TODO: Get actual user ID from auth service
+      final customerId = "1"; // TODO: Get actual customer ID or create new customer
+      final customerName = customerNameController.text;
+      final customerNumber = phoneController.text;
+      final paymentTypeValue = _formatPaymentType(paymentType);
+      final discountPercent = discountValueController.text.isEmpty ? "0" : discountValueController.text;
+      final discountAmount = discount.toStringAsFixed(2);
+      final roundOff = _calculateRoundoff().toStringAsFixed(2);
+      final totalAmount = total.toStringAsFixed(2);
+      final amountReceived = amountReceivedController.text.isEmpty ? total.toStringAsFixed(2) : amountReceivedController.text;
+      final note = notesController.text.isEmpty ? "Thank you for shopping!" : notesController.text;
+
+      // Call the API
+      final result = await ApiService.createInvoice(
+        userId: userId,
+        customerId: customerId,
+        customerName: customerName,
+        customerNumber: customerNumber,
+        paymentType: paymentTypeValue,
+        discountPercent: discountPercent,
+        discountAmount: discountAmount,
+        roundOff: roundOff,
+        totalAmount: totalAmount,
+        amountReceived: amountReceived,
+        note: note,
+        items: items,
+        charges: additionalCharges,
+      );
+
+      // Reset loading state
+      setState(() {
+        _isCreatingInvoice = false;
+      });
+
+      if (result['success'] == true) {
+        // Show success message and navigate to invoice created screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result[ApiConstants.messageKey] ?? 'Invoice created successfully'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
-        ),
-      ),
-      body: Center(
-        child: Card(
-          margin: EdgeInsets.all(16),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        );
+
+        // Show success dialog with options
+        _showSuccessDialog(result['invoice']);
+      } else {
+        // Show error message
+        final errorMessage = result[ApiConstants.messageKey] ?? 'Failed to create invoice';
+        final errorType = result[ApiConstants.errorKey] ?? 'Unknown Error';
+        
+        _showErrorDialog('$errorMessage\n\nError Type: $errorType');
+      }
+    } catch (e) {
+      // Reset loading state
+      setState(() {
+        _isCreatingInvoice = false;
+      });
+      
+      // Show error message
+      _showErrorDialog('An error occurred: ${e.toString()}');
+    }
+  }
+
+  // Show Error Dialog
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 24),
+              SizedBox(width: 8),
+              Text('Error', style: TextStyle(color: Colors.red)),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.restaurant, size: 40, color: Colors.deepOrange),
-                    SizedBox(width: 12),
-                    Text(
-                      'My Restaurant',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Please check your input and try again.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
                 ),
-                SizedBox(height: 8),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Retry creating the invoice
+                _createInvoice();
+              },
+              child: Text('Retry'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Format Payment Type for API
+  String _formatPaymentType(String paymentType) {
+    switch (paymentType.toLowerCase()) {
+      case 'cash':
+        return 'cash';
+      case 'card':
+        return 'card';
+      case 'upi':
+        return 'upi';
+      case 'bank transfer':
+        return 'bank_transfer';
+      default:
+        return 'cash';
+    }
+  }
+
+  // Clear Form Method
+  void _clearForm() {
+    setState(() {
+      // Clear items
+      items.clear();
+      
+      // Clear additional charges
+      additionalCharges.clear();
+      
+      // Clear discount
+      discountValueController.clear();
+      isDiscountExpanded = false;
+      
+      // Clear roundoff
+      roundoffController.clear();
+      isRoundoffExpanded = false;
+      
+      // Clear customer information
+      customerNameController.clear();
+      phoneController.clear();
+      
+      // Clear payment and notes
+      notesController.clear();
+      amountReceivedController.clear();
+      
+      // Reset payment type to default
+      paymentType = 'Cash';
+      
+      // Reset additional charges expansion
+      isAdditionalChargesExpanded = false;
+    });
+  }
+
+  // Show Success Dialog
+  void _showSuccessDialog(Map<String, dynamic>? invoiceData) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 24),
+              SizedBox(width: 8),
+              Text('Invoice Created!', style: TextStyle(color: Colors.green)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your invoice has been created successfully!',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              if (invoiceData != null && invoiceData['id'] != null)
                 Text(
-                  '123 Main Street, City',
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-                Divider(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Invoice #: $invoiceNumber'),
-                    Text('${date.day}/${date.month}/${date.year}'),
-                  ],
-                ),
-                SizedBox(height: 16),
-                DataTable(
-                  columns: [
-                    DataColumn(label: Text('Item')),
-                    DataColumn(label: Text('Qty')),
-                    DataColumn(label: Text('Price')),
-                    DataColumn(label: Text('Total')),
-                  ],
-                  rows:
-                      items.map((item) {
-                        final name = item['name']?.toString() ?? '';
-                        final qty =
-                            item['qty'] is int
-                                ? item['qty'] as int
-                                : int.tryParse(item['qty'].toString()) ?? 0;
-                        final price =
-                            item['price'] is double
-                                ? item['price'] as double
-                                : double.tryParse(item['price'].toString()) ??
-                                    0.0;
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(name)),
-                            DataCell(Text(qty.toString())),
-                            DataCell(Text('₹${price.toStringAsFixed(2)}')),
-                            DataCell(
-                              Text('₹${(qty * price).toStringAsFixed(2)}'),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                ),
-                Divider(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Subtotal: ₹${subtotal.toStringAsFixed(2)}'),
-                        Text('Discount: ₹${discount.toStringAsFixed(2)}'),
-                        Text('Tax: ₹${tax.toStringAsFixed(2)}'),
-                        SizedBox(height: 8),
-                        Text(
-                          'Grand Total: ₹${total.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 24),
-                Center(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Print feature coming soon')),
-                      );
-                    },
-                    icon: Icon(Icons.print),
-                    label: Text('Print Invoice'),
+                  'Invoice ID: ${invoiceData['id']}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
+              SizedBox(height: 16),
+              Text(
+                'What would you like to do next?',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ),
-        ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Navigate to invoice created screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InvoiceCreatedScreen(
+                      items: items,
+                      subtotal: subtotal, 
+                      discount: discount,
+                      tax: tax,
+                      additionalCharges: additionalCharges,
+                      additionalChargesTotal: additionalChargesTotal,
+                      roundoff: _calculateRoundoff(),
+                      total: total,
+                      invoiceNumber: invoiceData?['id']?.toString() ?? 'INV-${DateTime.now().millisecondsSinceEpoch}',
+                      date: DateTime.now(),
+                      customerName: customerNameController.text,
+                      customerPhone: phoneController.text,
+                      notes: notesController.text,
+                      paymentType: paymentType,
+                      amountReceived: double.tryParse(amountReceivedController.text) ?? total,
+                    ),
+                  ),
+                );
+              },
+              child: Text('View Invoice'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Clear form and create another invoice
+                _clearForm();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Form cleared. Ready to create another invoice!'),
+                    backgroundColor: Colors.blue,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Create Another'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Save Invoice Data Locally (for offline access)
+  void _saveInvoiceLocally(Map<String, dynamic> invoiceData) {
+    // TODO: Implement local storage for offline access
+    // This could use SharedPreferences, Hive, or SQLite
+    print('💾 [DEBUG] Saving invoice locally: ${invoiceData['id']}');
+  }
+
+  // Share Invoice (placeholder for future implementation)
+  void _shareInvoice(Map<String, dynamic> invoiceData) {
+    // TODO: Implement sharing functionality
+    // This could use the share_plus package or other sharing methods
+    print('📤 [DEBUG] Sharing invoice: ${invoiceData['id']}');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sharing functionality coming soon!'),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
+
+  // Print Invoice (placeholder for future implementation)
+  void _printInvoice(Map<String, dynamic> invoiceData) {
+    // TODO: Implement printing functionality
+    // This could use the printing package or other printing methods
+    print('🖨️ [DEBUG] Printing invoice: ${invoiceData['id']}');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Printing functionality coming soon!'),
+        backgroundColor: Colors.blue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  // Export Invoice (placeholder for future implementation)
+  void _exportInvoice(Map<String, dynamic> invoiceData) {
+    // TODO: Implement export functionality
+    // This could export to PDF, Excel, or other formats
+    print('📄 [DEBUG] Exporting invoice: ${invoiceData['id']}');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Export functionality coming soon!'),
+        backgroundColor: Colors.purple,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+
+
+  // Validate Form
+  bool _validateForm() {
+    // Check if customer name is provided
+    if (customerNameController.text.trim().isEmpty) {
+      _showErrorDialog('Customer name is required');
+      return false;
+    }
+
+    // Check if phone number is provided and valid
+    if (phoneController.text.trim().isEmpty) {
+      _showErrorDialog('Phone number is required');
+      return false;
+    }
+
+    if (phoneController.text.length != 10 || !RegExp(r'^\d{10}$').hasMatch(phoneController.text)) {
+      _showErrorDialog('Phone number must be 10 digits');
+      return false;
+    }
+
+    // Check if items are added
+    if (items.isEmpty) {
+      _showErrorDialog('Please add at least one item to create an invoice');
+      return false;
+    }
+
+    // Check if amount received is valid
+    final amountReceived = double.tryParse(amountReceivedController.text) ?? total;
+    if (amountReceived < total) {
+      _showErrorDialog('Amount received cannot be less than total amount');
+      return false;
+    }
+
+    return true;
+  }
+
+
+
+ 
 }
+
+
+
 

@@ -1271,4 +1271,251 @@ class ApiService {
       };
     }
   }
-} 
+
+  // Create Invoice API
+  static Future<Map<String, dynamic>> createInvoice({
+    required String userId,
+    required String customerId,
+    required String customerName,
+    required String customerNumber,
+    required String paymentType,
+    required String discountPercent,
+    required String discountAmount,
+    required String roundOff,
+    required String totalAmount,
+    required String amountReceived,
+    required String note,
+    required List<Map<String, dynamic>> items,
+    required List<Map<String, dynamic>> charges,
+  }) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.invoices}';
+      
+      print('🔍 [DEBUG] Create Invoice Request:');
+      print('URL: $url');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+      
+      // Validate input data
+      if (items.isEmpty) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'At least one item is required',
+          'invoice': null,
+        };
+      }
+
+      if (customerName.isEmpty) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Customer name is required',
+          'invoice': null,
+        };
+      }
+
+      if (customerNumber.isEmpty) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Customer phone number is required',
+          'invoice': null,
+        };
+      }
+
+      // Validate phone number format (10 digits)
+      if (customerNumber.length != 10 || !RegExp(r'^\d{10}$').hasMatch(customerNumber)) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Phone number must be 10 digits',
+          'invoice': null,
+        };
+      }
+
+      // Validate amounts
+      final totalAmountValue = double.tryParse(totalAmount);
+      final amountReceivedValue = double.tryParse(amountReceived);
+      
+      if (totalAmountValue == null || totalAmountValue <= 0) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Invalid total amount',
+          'invoice': null,
+        };
+      }
+
+      if (amountReceivedValue == null || amountReceivedValue < totalAmountValue) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Amount received cannot be less than total amount',
+          'invoice': null,
+        };
+      }
+
+      // Validate discount and roundoff
+      final discountPercentValue = double.tryParse(discountPercent);
+      final roundOffValue = double.tryParse(roundOff);
+      
+      if (discountPercentValue != null && (discountPercentValue < 0 || discountPercentValue > 100)) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Discount percentage must be between 0 and 100',
+          'invoice': null,
+        };
+      }
+
+      // Validate payment type
+      final validPaymentTypes = ['cash', 'card', 'upi', 'bank_transfer'];
+      if (!validPaymentTypes.contains(paymentType.toLowerCase())) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Invalid payment type',
+          'invoice': null,
+        };
+      }
+
+      // Validate user ID and customer ID
+      if (userId.isEmpty || customerId.isEmpty) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User ID and Customer ID are required',
+          'invoice': null,
+        };
+      }
+
+      // Validate note length
+      if (note.length > 500) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Note cannot exceed 500 characters',
+          'invoice': null,
+        };
+      }
+
+      // Prepare the request body according to the API structure
+      final Map<String, dynamic> requestBody = {
+        'user_id': userId,
+        'customer_id': customerId,
+        'customer_name': customerName,
+        'customer_number': customerNumber,
+        'payment_type': paymentType.toLowerCase(),
+        'discount_percent': discountPercent,
+        'discount_amount': discountAmount,
+        'round_off': roundOff,
+        'total_amount': totalAmount,
+        'amount_received': amountReceived,
+        'note': note,
+        'items': items.map((item) {
+          final qty = item['qty'] ?? 0;
+          final price = item['price'] ?? 0.0;
+          final total = qty * price;
+          final itemName = item['name'] ?? 'Unknown Item';
+          
+          // Validate item data
+          if (qty <= 0) {
+            throw Exception('Item quantity must be greater than 0');
+          }
+          if (price <= 0) {
+            throw Exception('Item price must be greater than 0');
+          }
+          
+          return {
+            'item_id': item['id'] ?? DateTime.now().millisecondsSinceEpoch, // Generate temporary ID if none exists
+            'quantity': qty,
+            'price': price.toString(),
+            'total': total.toString(),
+          };
+        }).toList(),
+        'charges': charges.map((charge) {
+          final price = charge['price'] ?? 0.0;
+          final chargeName = charge['name'] ?? '';
+          
+          // Validate charge data
+          if (chargeName.isEmpty) {
+            throw Exception('Charge name cannot be empty');
+          }
+          if (price < 0) {
+            throw Exception('Charge price cannot be negative');
+          }
+          
+          return {
+            'charge_name': chargeName,
+            'price': price.toString(),
+          };
+        }).toList(),
+      };
+      
+      print('📤 [DEBUG] Request Body: $requestBody');
+      print('📤 [DEBUG] JSON Body: ${jsonEncode(requestBody)}');
+
+      try {
+        final response = await http.post(
+          Uri.parse(url),
+          headers: ApiConstants.defaultHeaders,
+          body: jsonEncode(requestBody),
+        );
+
+        print('📡 [DEBUG] Create Invoice Response:');
+        print('Status Code: ${response.statusCode}');
+        print('Body: ${response.body}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final data = jsonDecode(response.body);
+          print('✅ [DEBUG] Success Response Data: $data');
+          
+          if (data['message'] != null && data['message'].toString().contains('successfully')) {
+            return {
+              'success': true,
+              ApiConstants.messageKey: data['message'] ?? 'Invoice created successfully',
+              'invoice': data['data'],
+            };
+          } else {
+            return {
+              'success': false,
+              ApiConstants.messageKey: data['message'] ?? 'Failed to create invoice',
+              'invoice': null,
+            };
+          }
+        } else {
+          // Handle different status codes
+          final errorData = jsonDecode(response.body);
+          print('❌ [DEBUG] Error Response Data: $errorData');
+          print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+          
+          // Try to extract error message from different possible fields
+          String errorMessage = 'Failed to create invoice';
+          if (errorData.containsKey('message')) {
+            errorMessage = errorData['message'];
+          } else if (errorData.containsKey('error')) {
+            errorMessage = errorData['error'];
+          } else if (errorData.containsKey('detail')) {
+            errorMessage = errorData['detail'];
+          } else if (errorData.containsKey('msg')) {
+            errorMessage = errorData['msg'];
+          }
+          
+          return {
+            'success': false,
+            ApiConstants.messageKey: errorMessage,
+            ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+            'invoice': null,
+          };
+        }
+      } catch (e) {
+        print('💥 [DEBUG] Exception occurred: $e');
+        print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+        print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Network error: ${e.toString()}',
+          ApiConstants.errorKey: 'Exception',
+          'invoice': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Validation Exception: $e');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Validation error: ${e.toString()}',
+        'invoice': null,
+      };
+    }
+  }
+}
