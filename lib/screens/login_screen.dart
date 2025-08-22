@@ -279,66 +279,81 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               ),
                               SizedBox(height: 20),
                               
-                                                             // Phone Number Field
-                               TextFormField(
-                                 controller: phoneController,
-                                 focusNode: phoneFocusNode,
-                                 keyboardType: TextInputType.number,
-                                 textInputAction: TextInputAction.done,
-                                 inputFormatters: [
-                                   FilteringTextInputFormatter.digitsOnly,
-                                   LengthLimitingTextInputFormatter(10),
-                                 ],
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your phone number';
-                                  }
-                                  if (value.length != 10) {
-                                    return 'Please enter a valid 10-digit phone number';
-                                  }
-                                  return null;
-                                },
-                                                                                                   decoration: InputDecoration(
-                                   labelText: 'Phone Number',
-                                   hintText: 'Enter your 10-digit phone number',
-                                   hintStyle: TextStyle(
-                                     fontSize: 14,
-                                     color: Colors.grey[500],
-                                   ),
-                                                                       prefixIcon: Icon(
-                                      Icons.phone_outlined,
-                                      color: primaryColor,
-                                      size: 20,
+                                                                                           // Phone Number Field
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey[300]!),
+                                  borderRadius: BorderRadius.circular(10),
+                                  color: Colors.grey[50],
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Phone Icon
+                                    Padding(
+                                      padding: EdgeInsets.only(left: 16, right: 8),
+                                      child: Icon(
+                                        Icons.phone_outlined,
+                                        color: primaryColor,
+                                        size: 20,
+                                      ),
                                     ),
-                                    prefixText: '+91 ',
-                                    prefixStyle: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.black87,
-                                      height: 1.0,
+                                    // +91 Country Code
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      child: Text(
+                                        '+91',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                          height: 1.2,
+                                        ),
+                                      ),
                                     ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: primaryColor, width: 2),
-                                  ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: Colors.red[300]!),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                                                     contentPadding: EdgeInsets.symmetric(
-                                     horizontal: 14,
-                                     vertical: 16,
-                                   ),
+                                    // Divider
+                                    Container(
+                                      height: 24,
+                                      width: 1,
+                                      color: Colors.grey[300],
+                                    ),
+                                    // Phone Number Input
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: phoneController,
+                                        focusNode: phoneFocusNode,
+                                        keyboardType: TextInputType.number,
+                                        textInputAction: TextInputAction.done,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          LengthLimitingTextInputFormatter(10),
+                                        ],
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please enter your phone number';
+                                          }
+                                          if (value.length != 10) {
+                                            return 'Please enter a valid 10-digit phone number';
+                                          }
+                                          return null;
+                                        },
+                                                                                 decoration: InputDecoration(
+                                           hintText: 'Enter your 10-digit phone number',
+                                           hintStyle: TextStyle(
+                                             fontSize: 14,
+                                             color: Colors.grey[500],
+                                           ),
+                                           border: InputBorder.none,
+                                           enabledBorder: InputBorder.none,
+                                           focusedBorder: InputBorder.none,
+                                           errorBorder: InputBorder.none,
+                                           contentPadding: EdgeInsets.symmetric(
+                                             horizontal: 16,
+                                             vertical: 16,
+                                           ),
+                                         ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               SizedBox(height: 20),
