@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
 import '../models/business_profile.dart';
@@ -318,20 +319,36 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       print('⚠️ [DEBUG] Could not set selected business category. Mapped value: $mappedBusinessCategory, Business profile: ${_businessProfile != null}');
     }
 
-    print('🔍 [DEBUG] Final dropdown values:');
-    print('   Selected State: $_selectedState');
-    print('   Selected Business Type: $_selectedBusinessType');
-    print('   Selected Business Category: $_selectedBusinessCategory');
+         print('🔍 [DEBUG] Final dropdown values:');
+     print('   Selected State: $_selectedState');
+     print('   Selected Business Type: $_selectedBusinessType');
+     print('   Selected Business Category: $_selectedBusinessCategory');
+     
+     // Debug signature information
+     print('🔍 [DEBUG] Signature information from API:');
+     print('   Digital Signature: ${_businessProfile!.digitalSign}');
+     print('   Business Signature: ${_businessProfile!.businessSignature}');
+     print('   Has Digital Signature: $_hasSignature');
+     print('   Has Business Signature: $_hasBusinessSignature');
+     print('   Digital Signature Path: $_signaturePath');
+     print('   Business Signature Path: $_businessSignaturePath');
 
-    // Check if signatures exist
-    if (_businessProfile!.digitalSign != null) {
-      _hasSignature = true;
-    }
-    if (_businessProfile!.businessSignature != null) {
-      _hasBusinessSignature = true;
-    }
+         // Check if signatures exist and set their paths
+     if (_businessProfile!.digitalSign != null && _businessProfile!.digitalSign!.isNotEmpty) {
+       _hasSignature = true;
+       _signaturePath = _businessProfile!.digitalSign;
+       print('✅ [DEBUG] Digital signature path set: $_signaturePath');
+     }
+     if (_businessProfile!.businessSignature != null && _businessProfile!.businessSignature!.isNotEmpty) {
+       _hasBusinessSignature = true;
+       _businessSignaturePath = _businessProfile!.businessSignature;
+       print('✅ [DEBUG] Business signature path set: $_businessSignaturePath');
+     }
 
     setState(() {});
+    
+    // Debug signature state after populating form fields
+    _debugSignatureState();
   }
 
   // Map API state values to dropdown options
@@ -922,6 +939,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
   }
 
   Widget _buildSignatureSection() {
+    // Debug signature state when building the section
+    _debugSignatureState();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -929,7 +949,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
-          height: 80,
+          height: 120,
           decoration: BoxDecoration(
             color: Colors.grey[50],
             borderRadius: BorderRadius.circular(8),
@@ -937,22 +957,51 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
           ),
           child:
               _hasSignature
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 32),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Signature added successfully',
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  ? Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        'Your Signature',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: _signaturePath != null && _signaturePath!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: _buildSignatureImage(_signaturePath!),
+                                )
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.green, size: 32),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Signature added successfully',
+                                        style: TextStyle(
+                                          color: Colors.green[700],
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   )
                   : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1571,6 +1620,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
   }
 
   Widget _buildBusinessSignatureSection() {
+    // Debug signature state when building the section
+    _debugSignatureState();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1578,7 +1630,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
-          height: 80,
+          height: 120,
           decoration: BoxDecoration(
             color: Colors.grey[50],
             borderRadius: BorderRadius.circular(8),
@@ -1586,22 +1638,51 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
           ),
           child:
               _hasBusinessSignature
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 32),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Business signature added',
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  ? Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        'Business Signature',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: _businessSignaturePath != null && _businessSignaturePath!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: _buildSignatureImage(_businessSignaturePath!),
+                                )
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.green, size: 32),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Business signature added',
+                                        style: TextStyle(
+                                          color: Colors.green[700],
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   )
                   : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1978,6 +2059,108 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
       },
     );
   }
+
+  Widget _buildSignatureImage(String signaturePath) {
+    print('🔍 [DEBUG] Building signature image for path: $signaturePath');
+    
+    // Check if it's a file path
+    if (signaturePath.startsWith('/') || signaturePath.contains('\\')) {
+      print('🔍 [DEBUG] Treating as file path');
+      return Image.file(
+        File(signaturePath),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ [ERROR] Failed to load file image: $error');
+          return _buildSignatureFallback('File signature');
+        },
+      );
+    }
+    
+    // Check if it's a URL
+    if (signaturePath.startsWith('http://') || signaturePath.startsWith('https://')) {
+      print('🔍 [DEBUG] Treating as URL');
+      return Image.network(
+        signaturePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ [ERROR] Failed to load network image: $error');
+          return _buildSignatureFallback('URL signature');
+        },
+      );
+    }
+    
+    // Check if it's base64 data
+    if (signaturePath.startsWith('data:image/') || signaturePath.length > 100) {
+      print('🔍 [DEBUG] Treating as base64 data');
+      try {
+        // Remove data:image/...;base64, prefix if present
+        String base64String = signaturePath;
+        if (signaturePath.contains(';base64,')) {
+          base64String = signaturePath.split(';base64,')[1];
+        }
+        
+        return Image.memory(
+          base64Decode(base64String),
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ [ERROR] Failed to load base64 image: $error');
+            return _buildSignatureFallback('Base64 signature');
+          },
+        );
+      } catch (e) {
+        print('❌ [ERROR] Failed to decode base64: $e');
+        return _buildSignatureFallback('Base64 signature');
+      }
+    }
+    
+    // Default fallback
+    print('⚠️ [WARNING] Unknown signature format, using fallback');
+    return _buildSignatureFallback('Unknown format');
+  }
+
+  Widget _buildSignatureFallback(String type) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle, color: Colors.green, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            'Signature added successfully',
+            style: TextStyle(
+              color: Colors.green[700],
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '($type)',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _debugSignatureState() {
+    print('🔍 [DEBUG] Current signature state:');
+    print('   _hasSignature: $_hasSignature');
+    print('   _hasBusinessSignature: $_hasBusinessSignature');
+    print('   _signaturePath: $_signaturePath');
+    print('   _businessSignaturePath: $_businessSignaturePath');
+    if (_businessProfile != null) {
+      print('   API Digital Signature: ${_businessProfile!.digitalSign}');
+      print('   API Business Signature: ${_businessProfile!.businessSignature}');
+    } else {
+      print('   Business Profile: null');
+    }
+  }
+
+
 
   Widget _buildTextField({
     required TextEditingController controller,
