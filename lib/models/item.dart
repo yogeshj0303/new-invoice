@@ -276,6 +276,7 @@ class ItemDetails {
   final int userId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final ItemCategory? category; // Add category field
 
   ItemDetails({
     required this.id,
@@ -286,6 +287,7 @@ class ItemDetails {
     required this.userId,
     required this.createdAt,
     required this.updatedAt,
+    this.category, // Add category parameter
   });
 
   factory ItemDetails.fromJson(Map<String, dynamic> json) {
@@ -310,6 +312,7 @@ class ItemDetails {
       userId: json['user_id'] ?? 0,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      category: json['category'] != null ? ItemCategory.fromJson(json['category']) : null, // Parse category
     );
   }
 
@@ -320,6 +323,43 @@ class ItemDetails {
       'item_category_id': itemCategoryId,
       'item_description': itemDescription,
       'show_online_store': showOnlineStore,
+      'user_id': userId,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'category': category?.toJson(), // Include category in JSON
+    };
+  }
+}
+
+class ItemCategory {
+  final int id;
+  final String itemCategoryName;
+  final int userId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  ItemCategory({
+    required this.id,
+    required this.itemCategoryName,
+    required this.userId,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ItemCategory.fromJson(Map<String, dynamic> json) {
+    return ItemCategory(
+      id: json['id'] ?? 0,
+      itemCategoryName: json['item_category_name'] ?? '',
+      userId: json['user_id'] ?? 0,
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'item_category_name': itemCategoryName,
       'user_id': userId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),

@@ -895,7 +895,13 @@ class _ItemsScreenState extends State<ItemsScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ItemDetailsScreen(itemId: item.id),
+                builder: (context) => ItemDetailsScreen(
+                  itemId: item.id,
+                  onItemDeleted: () {
+                    // Refresh the items list when an item is deleted
+                    _loadItems();
+                  },
+                ),
               ),
             );
           },

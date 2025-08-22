@@ -30,6 +30,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final TextEditingController amountReceivedController = TextEditingController();
   final TextEditingController chargeNameController = TextEditingController();
   final TextEditingController chargePriceController = TextEditingController();
+  
+  // Invoice details controllers
+  final TextEditingController invoiceDateController = TextEditingController(text: '22 Aug 2025');
+  final TextEditingController dueDateController = TextEditingController(text: 'None');
+  final TextEditingController prefixController = TextEditingController(text: 'V/SL/');
+  final TextEditingController serialNumberController = TextEditingController(text: '1');
+  
   String paymentType = 'Cash';
   
   // Additional charges state
@@ -291,23 +298,26 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
    
-   @override
-   void dispose() {
-     itemController.dispose();
-     qtyController.dispose();
-     priceController.dispose();
-     discountController.dispose();
-     tableController.dispose();
-     customerNameController.dispose();
-     phoneController.dispose();
-     notesController.dispose();
-     amountReceivedController.dispose();
-     chargeNameController.dispose();
-     chargePriceController.dispose();
-     discountValueController.dispose();
-     roundoffController.dispose();
-     super.dispose();
-   }
+       @override
+    void dispose() {
+      itemController.dispose();
+      qtyController.dispose();
+      priceController.dispose();
+      discountController.dispose();
+      tableController.dispose();
+      customerNameController.dispose();
+      phoneController.dispose();
+      notesController.dispose();
+      amountReceivedController.dispose();
+      chargeNameController.dispose();
+      chargePriceController.dispose();
+      discountValueController.dispose();
+      roundoffController.dispose();
+      invoiceDateController.dispose();
+      dueDateController.dispose();
+      serialNumberController.dispose();
+      super.dispose();
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -383,25 +393,32 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                      Row(
                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                        children: [
-                         Text(
-                           'Invoice #2',
-                           style: theme.textTheme.titleMedium?.copyWith(
-                             fontWeight: FontWeight.w600,
-                             color: Colors.black87,
-                           ),
-                         ),
-                         Container(
-                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                           decoration: BoxDecoration(
-                             color: primaryColor.withOpacity(0.1),
+                                                   Text(
+                            'Invoice #${serialNumberController.text}',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                         Material(
+                           color: Colors.transparent,
+                           child: InkWell(
                              borderRadius: BorderRadius.circular(4),
-                           ),
-                           child: Text(
-                             'EDIT',
-                             style: theme.textTheme.bodySmall?.copyWith(
-                               fontWeight: FontWeight.w600,
-                               color: primaryColor,
-                               fontSize: 11,
+                             onTap: () => _showEditInvoiceBottomSheet(),
+                             child: Container(
+                               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                               decoration: BoxDecoration(
+                                 color: primaryColor.withOpacity(0.1),
+                                 borderRadius: BorderRadius.circular(4),
+                               ),
+                               child: Text(
+                                 'EDIT',
+                                 style: theme.textTheme.bodySmall?.copyWith(
+                                   fontWeight: FontWeight.w600,
+                                   color: primaryColor,
+                                   fontSize: 11,
+                                 ),
+                               ),
                              ),
                            ),
                          ),
@@ -409,19 +426,20 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                      ),
                      SizedBox(height: 4),
                      Text(
-                       '03 Aug 2025',
+                       invoiceDateController.text,
                        style: theme.textTheme.bodyMedium?.copyWith(
                          color: Colors.grey[600],
                          fontSize: 13,
                        ),
                      ),
-                     Text(
-                       '- 7 day(s) to due',
-                       style: theme.textTheme.bodySmall?.copyWith(
-                         color: Colors.grey[500],
-                         fontSize: 11,
-                       ),
-                     ),
+                                           if (dueDateController.text.isNotEmpty && dueDateController.text != 'None')
+                        Text(
+                          'Due: ${dueDateController.text} (${_calculateDaysDifference()} day(s))',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[500],
+                            fontSize: 11,
+                          ),
+                        ),
                    ],
                  ),
                ),
@@ -1829,7 +1847,549 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
+  void _showEditInvoiceBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return _buildEditInvoiceBottomSheet();
+      },
+    );
+  }
 
+    Widget _buildEditInvoiceBottomSheet() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.5,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: EdgeInsets.only(top: 8),
+            width: 32,
+            height: 3,
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Header
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Edit Invoice Details',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: Colors.grey[600], size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Invoice Date
+                  _buildCompactDateField(
+                    'Invoice Date',
+                    invoiceDateController,
+                    Icons.calendar_today,
+                    () => _selectDate(context, invoiceDateController),
+                  ),
+                  SizedBox(height: 16),
+                  
+                                     // Due Date
+                   _buildCompactDropdownField(
+                     'Due Date',
+                     dueDateController,
+                     Icons.calendar_today,
+                   ),
+                   SizedBox(height: 6),
+                  
+                  // Starting Serial Number
+                  _buildCompactTextField(
+                    'Starting Serial Number',
+                    serialNumberController,
+                    Icons.numbers,
+                  ),
+                  SizedBox(height: 6),
+                  
+                  // Hint text
+                  Text(
+                    '(Ex: 1, 2, 3..)',
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 11,
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          // Save Button
+          Container(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {});
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'SAVE CHANGES',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField(String label, TextEditingController controller, IconData icon, VoidCallback onTap) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 8),
+        InkWell(
+          onTap: onTap,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    controller.text.isEmpty ? 'Select Date' : controller.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: controller.text.isEmpty ? Colors.grey[500] : Colors.black87,
+                    ),
+                  ),
+                ),
+                Icon(icon, color: Colors.grey[600], size: 20),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactDateField(String label, TextEditingController controller, IconData icon, VoidCallback onTap) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 6),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    controller.text.isEmpty ? 'Select Date' : controller.text,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: controller.text.isEmpty ? Colors.grey[500] : Colors.black87,
+                    ),
+                  ),
+                ),
+                Icon(icon, color: Colors.grey[600], size: 18),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickDateButton(String text, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: primaryColor.withOpacity(0.3)),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildCompactTextField(String label, TextEditingController controller, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 6),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  style: TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[50]!),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    border: InputBorder.none,
+                    hintText: 'Enter $label',
+                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              Icon(icon, color: Colors.grey[600], size: 18),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactDropdownField(String label, TextEditingController controller, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 4),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, child) {
+              return DropdownButton<String>(
+                value: value.text == 'None' ? 'None' : 
+                       ['7 Days', '15 Days', '30 Days', '45 Days', '60 Days'].contains(value.text) ? value.text : null,
+                hint: Text(
+                  value.text == 'None' ? 'Select Due Date' : value.text,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: value.text == 'None' ? Colors.grey[500] : Colors.black87,
+                  ),
+                ),
+                isExpanded: true,
+                underline: SizedBox.shrink(),
+                icon: Icon(icon, color: Colors.grey[600], size: 16),
+                menuMaxHeight: 200,
+                items: [
+                  DropdownMenuItem<String>(
+                    value: '7 Days',
+                    child: Text(
+                      '7 Days',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: '15 Days',
+                    child: Text(
+                      '15 Days',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: '30 Days',
+                    child: Text(
+                      '30 Days',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: '45 Days',
+                    child: Text(
+                      '45 Days',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: '60 Days',
+                    child: Text(
+                      '60 Days',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'None',
+                    child: Text(
+                      'None',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red[600],
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: (String? dropdownValue) {
+                  if (dropdownValue != null) {
+                    _setDueDateFromDropdown(dropdownValue);
+                  }
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 8),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Enter $label',
+                    hintStyle: TextStyle(color: Colors.grey[500]),
+                  ),
+                ),
+              ),
+              Icon(icon, color: Colors.grey[600], size: 20),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+    DateTime initialDate = DateTime.now();
+    if (controller.text.isNotEmpty) {
+      final parsedDate = _parseDate(controller.text);
+      if (parsedDate != null) {
+        initialDate = parsedDate;
+      }
+    }
+    
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        controller.text = '${picked.day} ${_getMonthName(picked.month)} ${picked.year}';
+      });
+    }
+  }
+
+
+
+  String? _getDropdownValue(String controllerText) {
+    if (controllerText.isEmpty || controllerText == 'None') {
+      return 'None';
+    }
+    
+    // Return the controller text if it matches one of the predefined dropdown values
+    if (['7 Days', '15 Days', '30 Days', '45 Days', '60 Days'].contains(controllerText)) {
+      return controllerText;
+    }
+    
+    // If it's any other value, return null to show hint
+    return null;
+  }
+
+  void _setDueDateFromDropdown(String value) {
+    setState(() {
+      dueDateController.text = value;
+    });
+  }
+
+
+
+    String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
+
+  int _calculateDaysDifference() {
+    if (invoiceDateController.text.isEmpty || 
+        dueDateController.text.isEmpty || 
+        dueDateController.text == '') {
+      return 0;
+    }
+    
+    // If dueDateController.text is in format "X Days", extract the number
+    if (dueDateController.text.endsWith(' Days')) {
+      final days = int.tryParse(dueDateController.text.split(' ')[0]);
+      if (days != null) {
+        return days;
+      }
+    }
+    
+    // Fallback to date parsing for backward compatibility
+    try {
+      final invoiceDate = _parseDate(invoiceDateController.text);
+      final dueDate = _parseDate(dueDateController.text);
+      if (invoiceDate != null && dueDate != null) {
+        return dueDate.difference(invoiceDate).inDays;
+      }
+    } catch (e) {
+      // If parsing fails, return 0
+    }
+    return 0;
+  }
+
+  DateTime? _parseDate(String dateString) {
+    try {
+      final parts = dateString.split(' ');
+      if (parts.length == 3) {
+        final day = int.parse(parts[0]);
+        final month = _getMonthNumber(parts[1]);
+        final year = int.parse(parts[2]);
+        return DateTime(year, month, day);
+      }
+    } catch (e) {
+      // If parsing fails, return null
+    }
+    return null;
+  }
+
+  int _getMonthNumber(String monthName) {
+    const months = {
+      'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+      'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+    };
+    return months[monthName] ?? 1;
+  }
+
+ 
 }
 
 class InvoicePreviewScreen extends StatelessWidget {

@@ -1051,19 +1051,10 @@ class ApiService {
     String? itemName,
     String? unit,
     String? salesPriceAmount,
-    int salesPriceTax = 0,
-    String? purchasePriceAmount,
-    int purchasePriceTax = 0,
-    String? mrpPrice,
-    String? gst,
     int? openingStock,
-    String? asOfDate,
-    String? lowAlertStatus,
-    int? lowAlertQuantity,
     int? itemCategoryId,
     String? itemDescription,
     String? showOnlineStore,
-    List<String>? imagePaths,
   }) async {
     try {
       final url = '${ApiConstants.baseURL}${ApiConstants.updateItem}';
@@ -1073,44 +1064,42 @@ class ApiService {
       print('Item ID: $itemId');
       print('Headers: ${ApiConstants.defaultHeaders}');
       
-      // Prepare the request body
-      final Map<String, dynamic> requestBody = {
-        'item_id': itemId,
+      // Prepare form fields (same format as create item)
+      final Map<String, String> formFields = {
+        'id': itemId.toString(),
         'user_id': userId,
       };
       
       // Add optional fields only if they are not null
-      if (itemName != null) requestBody['item_name'] = itemName;
-      if (unit != null) requestBody['unit'] = unit;
-      if (salesPriceAmount != null) requestBody['salesprice_amount'] = salesPriceAmount;
-      if (salesPriceTax != null) requestBody['salesprice_tax'] = salesPriceTax;
-      if (purchasePriceAmount != null) requestBody['purches_price_amount'] = purchasePriceAmount;
-      if (purchasePriceTax != null) requestBody['purches_price_tax'] = purchasePriceTax;
-      if (mrpPrice != null) requestBody['mrp_price'] = mrpPrice;
-      if (gst != null) requestBody['gst'] = gst;
-      if (openingStock != null) requestBody['opening_stock'] = openingStock;
-      if (asOfDate != null) requestBody['as_of_date'] = asOfDate;
-      if (lowAlertStatus != null) requestBody['low_alert_status'] = lowAlertStatus;
-      if (lowAlertQuantity != null) requestBody['low_alert_quantity'] = lowAlertQuantity;
-      if (itemCategoryId != null) requestBody['item_category_id'] = itemCategoryId;
-      if (itemDescription != null) requestBody['item_description'] = itemDescription;
-      if (showOnlineStore != null) requestBody['show_online_store'] = showOnlineStore;
+      if (itemName != null) formFields['item_name'] = itemName;
+      if (unit != null) formFields['pricings[0][unit]'] = unit;
+      if (salesPriceAmount != null) formFields['pricings[0][price]'] = salesPriceAmount;
+      if (openingStock != null) formFields['stocks[0][opening_stock]'] = openingStock.toString();
+      if (itemDescription != null) formFields['item_description'] = itemDescription;
+      if (showOnlineStore != null) formFields['show_online_store'] = showOnlineStore;
+      if (itemCategoryId != null) formFields['item_category_id'] = itemCategoryId.toString();
       
-      print('📤 [DEBUG] Request Body: $requestBody');
-      print('📤 [DEBUG] JSON Body: ${jsonEncode(requestBody)}');
+      print('📤 [DEBUG] Form Fields: $formFields');
+
+      // Create multipart request for form data (same as create item)
+      final request = http.MultipartRequest('POST', Uri.parse(url));
       
-      final response = await http.post(
-        Uri.parse(url),
-        headers: ApiConstants.defaultHeaders,
-        body: jsonEncode(requestBody),
-      );
+      // Add headers
+      request.headers.addAll(ApiConstants.defaultHeaders);
+      
+      // Add form fields
+      request.fields.addAll(formFields);
+
+      print('📡 [DEBUG] Sending multipart request...');
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
       
       print('📥 [DEBUG] Update Item Response:');
       print('Status Code: ${response.statusCode}');
-      print('Body: ${response.body}');
+      print('Body: $responseBody');
       
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(responseBody);
         print('✅ [DEBUG] Success Response Data: $data');
         
         if (data['data'] != null) {
@@ -1132,7 +1121,7 @@ class ApiService {
         }
       } else {
         // Handle different status codes
-        final errorData = jsonDecode(response.body);
+        final errorData = jsonDecode(responseBody);
         print('❌ [DEBUG] Error Response Data: $errorData');
         print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
         
@@ -1162,6 +1151,76 @@ class ApiService {
       return {
         'success': false,
         'item': null,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+      };
+    }
+  }
+
+  // Delete Item API
+  static Future<Map<String, dynamic>> deleteItem(int itemId) async {
+    try {
+      final url = '${ApiConstants.baseURL}${ApiConstants.items}/$itemId';
+      
+      print('🗑️ [DEBUG] Delete Item Request:');
+      print('URL: $url');
+      print('Item ID: $itemId');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+      
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+      
+      print('📥 [DEBUG] Delete Item Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['message'] != null && data['message'].toString().contains('deleted successfully')) {
+          return {
+            'success': true,
+            ApiConstants.messageKey: data['message'] ?? 'Item deleted successfully',
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Failed to delete item',
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to delete item';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('💥 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
         ApiConstants.messageKey: 'Network error: ${e.toString()}',
         ApiConstants.errorKey: 'Exception',
       };
