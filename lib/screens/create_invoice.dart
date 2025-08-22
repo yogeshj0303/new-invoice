@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:invoice_app/models/item.dart';
-import 'package:invoice_app/widgets/edit_bottom_sheet_content.dart';
-import 'package:invoice_app/services/api_service.dart';
-import 'package:invoice_app/constants/api_constants.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import '../models/customer.dart';
+import '../models/item.dart';
+import '../services/api_service.dart';
+import '../constants/api_constants.dart';
+import '../utils/auth_utils.dart';
+import '../widgets/edit_bottom_sheet_content.dart';
 import 'invoice_created_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
@@ -1824,15 +1828,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         );
       }
 
-  void _editItem(Map<String, dynamic> item) {
+  void _editItem(Map<String, dynamic> item) async {
     // Debug logging for GST values
     print('🔍 [DEBUG] Editing item: ${item['name']}, GST: ${item['gst']}');
+    
+    // Get actual user ID from auth service
+    final userId = await AuthUtils.getCurrentUserId();
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User not authenticated. Please login again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     
     // Convert Map to Item object for EditBottomSheetContent
     final itemObject = Item(
       id: item['id'] ?? 0,
       itemName: item['name'] ?? '',
-      userId: 1, // TODO: Get actual user ID from auth service
+      userId: userId,
       createdAt: item['createdAt'] ?? DateTime.now(),
       updatedAt: item['createdAt'] ?? DateTime.now(),
       pricings: [
@@ -1870,7 +1886,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         itemCategoryId: null, // TODO: Map category name to ID
         itemDescription: item['description'] ?? '',
         showOnlineStore: 'false',
-        userId: 1, // TODO: Get actual user ID from auth service
+        userId: userId,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -2521,7 +2537,21 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       }
 
       // Prepare data for API call
-      final userId = "1"; // TODO: Get actual user ID from auth service
+      // Get actual user ID from auth service
+      final userId = await AuthUtils.getCurrentUserId();
+      if (userId == null) {
+        setState(() {
+          _isCreatingInvoice = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User not authenticated. Please login again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final customerId = "1"; // TODO: Get actual customer ID or create new customer
       final customerName = customerNameController.text;
       final customerNumber = phoneController.text;
@@ -2535,7 +2565,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
       // Call the API
       final result = await ApiService.createInvoice(
-        userId: userId,
+        userId: userId.toString(),
         customerId: customerId,
         customerName: customerName,
         customerNumber: customerNumber,

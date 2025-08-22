@@ -3,10 +3,32 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../models/business_profile.dart';
 import '../models/customer.dart';
+import '../models/user.dart';
+import '../utils/auth_utils.dart';
 import 'dart:io'; // Added for File and Platform
 import '../models/item.dart'; // Added for Item
 
 class ApiService {
+  // Helper method to get current user ID
+  static Future<int?> getCurrentUserId() async {
+    try {
+      return await AuthUtils.getCurrentUserId();
+    } catch (e) {
+      print('⚠️ [WARNING] Failed to get current user ID: $e');
+      return null;
+    }
+  }
+
+  // Helper method to get current user
+  static Future<User?> getCurrentUser() async {
+    try {
+      return await AuthUtils.getCurrentUser();
+    } catch (e) {
+      print('⚠️ [WARNING] Failed to get current user: $e');
+      return null;
+    }
+  }
+
   // Send OTP API
   static Future<Map<String, dynamic>> sendOTP(String phoneNumber) async {
     try {
@@ -230,9 +252,19 @@ class ApiService {
   }
 
   // Get Business Profile API
-  static Future<Map<String, dynamic>> getBusinessProfile(int userId) async {
+  static Future<Map<String, dynamic>> getBusinessProfile([int? userId]) async {
     try {
-      final url = '${ApiConstants.baseURL}/api/business-profiles?user_id=$userId';
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'businessProfile': null,
+        };
+      }
+      
+      final url = '${ApiConstants.baseURL}/api/business-profiles?user_id=$currentUserId';
       final response = await http.get(Uri.parse(url), headers: ApiConstants.defaultHeaders);
 
       if (response.statusCode == 200) {
@@ -269,7 +301,7 @@ class ApiService {
 
   // Update Business Profile API
   static Future<Map<String, dynamic>> updateBusinessProfile({
-    required int userId,
+    int? userId,
     required String businessName,
     required String gstNo,
     required String phoneNoFirst,
@@ -287,11 +319,21 @@ class ApiService {
     String? businessSignature,
   }) async {
     try {
-      final url = '${ApiConstants.baseURL}/api/business-profiles?user_id=$userId';
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'businessProfile': null,
+        };
+      }
+      
+      final url = '${ApiConstants.baseURL}/api/business-profiles?user_id=$currentUserId';
       
       // Build query parameters
       final queryParams = <String, String>{
-        'user_id': userId.toString(),
+        'user_id': currentUserId.toString(),
         'business_name': businessName,
         'gst_no': gstNo,
         'phone_no_first': phoneNoFirst,
@@ -434,7 +476,7 @@ class ApiService {
 
   // Create Customer API
   static Future<Map<String, dynamic>> createCustomer({
-    required String userId,
+    String? userId,
     required String customerName,
     required String companyName,
     required String email,
@@ -445,11 +487,21 @@ class ApiService {
     required String state,
   }) async {
     try {
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'customer': null,
+        };
+      }
+      
       final url = '${ApiConstants.baseURL}${ApiConstants.customers}';
       
       // Build query parameters
       final queryParams = <String, String>{
-        'user_id': userId,
+        'user_id': currentUserId.toString(),
         'customer_name': customerName,
         'company_name': companyName,
         'email': email,
@@ -547,9 +599,19 @@ class ApiService {
   }
 
   // Get Customers List API
-  static Future<Map<String, dynamic>> getCustomers(String userId) async {
+  static Future<Map<String, dynamic>> getCustomers([String? userId]) async {
     try {
-      final url = '${ApiConstants.baseURL}${ApiConstants.customers}?user_id=$userId';
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'customers': [],
+        };
+      }
+      
+      final url = '${ApiConstants.baseURL}${ApiConstants.customers}?user_id=$currentUserId';
       
       print('🔍 [DEBUG] Get Customers Request:');
       print('URL: $url');
@@ -671,6 +733,15 @@ class ApiService {
   // Create Item Category API
   static Future<Map<String, dynamic>> createItemCategory(String categoryName) async {
     try {
+      // Get current user ID
+      final currentUserId = await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          'message': 'User not authenticated',
+        };
+      }
+      
       final url = '${ApiConstants.baseURL}/api/item-categories';
       final response = await http.post(
         Uri.parse(url),
@@ -678,7 +749,7 @@ class ApiService {
           'Content-Type': 'application/json',
         },
         body: json.encode({
-          'user_id': '1', // TODO: Get actual user ID from auth service
+          'user_id': currentUserId.toString(),
           'item_category_name': categoryName,
         }),
       );
@@ -706,7 +777,7 @@ class ApiService {
 
   // Create Item API
   static Future<Map<String, dynamic>> createItem({
-    required String userId,
+    String? userId,
     required String itemName,
     String? unit,
     String? salesPriceAmount,
@@ -725,11 +796,21 @@ class ApiService {
     List<String>? imagePaths,
   }) async {
     try {
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'item': null,
+        };
+      }
+      
       final url = '${ApiConstants.baseURL}${ApiConstants.items}';
       
       // Build form data fields matching the API structure
       final Map<String, String> formFields = {
-        'user_id': userId,
+        'user_id': currentUserId.toString(),
         'item_name': itemName,
       };
 
@@ -926,9 +1007,19 @@ class ApiService {
   }
 
   // Get Items List API
-  static Future<Map<String, dynamic>> getItems(String userId) async {
+  static Future<Map<String, dynamic>> getItems([String? userId]) async {
     try {
-      final url = '${ApiConstants.baseURL}${ApiConstants.userItems}?user_id=$userId';
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'items': [],
+        };
+      }
+      
+      final url = '${ApiConstants.baseURL}${ApiConstants.userItems}?user_id=$currentUserId';
       
       print('🔍 [DEBUG] Get Items Request:');
       print('URL: $url');
@@ -1079,7 +1170,7 @@ class ApiService {
   // Update Item API
   static Future<Map<String, dynamic>> updateItem({
     required int itemId,
-    required String userId,
+    String? userId,
     String? itemName,
     String? unit,
     String? salesPriceAmount,
@@ -1119,9 +1210,20 @@ class ApiService {
       
       
       
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          'item': null,
+          ApiConstants.messageKey: 'User not authenticated',
+          ApiConstants.errorKey: 'Authentication Error',
+        };
+      }
+      
       // Add item ID and user ID first
       formFields['id'] = itemId.toString();
-      formFields['user_id'] = userId;
+      formFields['user_id'] = currentUserId.toString();
       
       print('🔍 [DEBUG] Item ID being sent: ${formFields['id']} (Type: ${formFields['id'].runtimeType})');
       
@@ -1307,7 +1409,7 @@ class ApiService {
 
   // Create Invoice API
   static Future<Map<String, dynamic>> createInvoice({
-    required String userId,
+    String? userId,
     required String customerId,
     required String customerName,
     required String customerNumber,
@@ -1404,11 +1506,21 @@ class ApiService {
         };
       }
 
-      // Validate user ID and customer ID
-      if (userId.isEmpty || customerId.isEmpty) {
+      // Use provided userId or get current user ID
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
         return {
           'success': false,
-          ApiConstants.messageKey: 'User ID and Customer ID are required',
+          ApiConstants.messageKey: 'User not authenticated',
+          'invoice': null,
+        };
+      }
+      
+      // Validate customer ID
+      if (customerId.isEmpty) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Customer ID is required',
           'invoice': null,
         };
       }
@@ -1424,7 +1536,7 @@ class ApiService {
 
       // Prepare the request body according to the API structure
       final Map<String, dynamic> requestBody = {
-        'user_id': userId,
+        'user_id': currentUserId.toString(),
         'customer_id': customerId,
         'customer_name': customerName,
         'customer_number': customerNumber,

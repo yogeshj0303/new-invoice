@@ -8,6 +8,7 @@ import 'package:signature/signature.dart';
 import '../models/business_profile.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
+import '../utils/auth_utils.dart';
 
 class BusinessProfileScreen extends StatefulWidget {
   const BusinessProfileScreen({super.key});
@@ -95,14 +96,31 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen>
 
   // Load business profile from API
   Future<void> _loadBusinessProfile() async {
+    if (_isLoadingProfile) return;
+
     setState(() {
       _isLoadingProfile = true;
     });
 
     try {
-      // For now, using user_id = 1 as per the API example
-      // In a real app, you would get this from user authentication
-      final result = await ApiService.getBusinessProfile(1);
+      // Get actual user ID from auth service
+      final userId = await AuthUtils.getCurrentUserId();
+      if (userId == null) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('User not authenticated. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final result = await ApiService.getBusinessProfile(userId);
       
       if (result['success'] == true && result['businessProfile'] != null) {
         setState(() {

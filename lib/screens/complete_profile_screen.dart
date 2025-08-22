@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../constants/api_constants.dart';
 import '../utils/location_data.dart';
 import '../utils/auth_utils.dart';
+import '../models/user.dart';
 import '../screens/main_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
@@ -123,6 +124,19 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
 
       if (result[ApiConstants.successKey]) {
         print('✅ [DEBUG] Profile updated successfully!');
+        
+        // Extract user data from the response
+        User? user;
+        if (result['user'] != null) {
+          try {
+            user = User.fromJson(result['user']);
+            print('✅ [DEBUG] User data parsed successfully: ${user.toString()}');
+          } catch (e) {
+            print('⚠️ [WARNING] Failed to parse user data: $e');
+            user = null;
+          }
+        }
+        
         // Show success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -137,20 +151,27 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
           );
         }
         
-        // Set user as logged in and navigate to main screen on successful profile completion
+        // Set user as logged in and save complete user data
         if (mounted) {
-          print('🔄 [DEBUG] Setting user as logged in and navigating to main screen...');
+          print('🔄 [DEBUG] Setting user as logged in and saving user data...');
           
-          // Try to save login state, but don't let it block navigation
+          // Save login state and user data
           bool loginSaved = false;
           try {
             loginSaved = await AuthUtils.setLoggedIn(
               phone: widget.phoneNumber,
               name: nameController.text,
+              user: user, // Pass the complete user data
             );
-            print('✅ [DEBUG] Login state save result: $loginSaved');
+            print('✅ [DEBUG] Login state and user data save result: $loginSaved');
+            
+            // Also store user data separately for easy access
+            if (user != null) {
+              await AuthUtils.storeUserData(user);
+              print('✅ [DEBUG] User data stored separately');
+            }
           } catch (e) {
-            print('⚠️ [WARNING] Failed to save login state: $e');
+            print('⚠️ [WARNING] Failed to save login state or user data: $e');
             print('🔄 [DEBUG] Continuing with navigation anyway...');
           }
           
@@ -198,6 +219,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
                     children: [
                       Text('Your profile has been updated successfully!'),
                       SizedBox(height: 8),
+                      if (user != null) ...[
+                        Text('User ID: ${user.id}'),
+                        Text('Name: ${user.name}'),
+                        Text('Email: ${user.email}'),
+                        SizedBox(height: 8),
+                      ],
                       Text(
                         'Note: There was a minor issue with navigation, but your profile is saved.',
                         style: TextStyle(

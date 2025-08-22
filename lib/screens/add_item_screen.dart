@@ -4,6 +4,7 @@ import '../models/item.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
 import '../widgets/edit_bottom_sheet_content.dart';
+import '../utils/auth_utils.dart';
 import 'create_invoice.dart';
 import 'item_details_screen.dart'; // Added import for ItemDetailsScreen
 
@@ -50,7 +51,18 @@ class _AddItemScreenState extends State<AddItemScreen> {
     });
 
     try {
-      final result = await ApiService.getItems('1'); // TODO: Get actual user ID from auth service
+      // Get actual user ID from auth service
+      final userId = await AuthUtils.getCurrentUserId();
+      if (userId == null) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'User not authenticated. Please login again.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final result = await ApiService.getItems(userId.toString());
       
       if (result['success'] == true) {
         setState(() {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../models/item.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
+import '../utils/auth_utils.dart';
 import 'create_item_screen.dart';
 import 'item_details_screen.dart';
 
@@ -129,7 +130,18 @@ class _ItemsScreenState extends State<ItemsScreen> {
     });
 
     try {
-      final result = await ApiService.getItems('1'); // TODO: Get actual user ID from auth service
+      // Get actual user ID from auth service
+      final userId = await AuthUtils.getCurrentUserId();
+      if (userId == null) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'User not authenticated. Please login again.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final result = await ApiService.getItems(userId.toString());
       
       if (result['success'] == true) {
         final items = result['items'] as List<Item>;

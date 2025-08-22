@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/customer.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
+import '../utils/auth_utils.dart';
 
 // Custom text input formatter to convert text to uppercase
 class UpperCaseTextInputFormatter extends TextInputFormatter {
@@ -74,9 +76,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
       );
 
       try {
+        // Get actual user ID from auth service
+        final userId = await AuthUtils.getCurrentUserId();
+        if (userId == null) {
+          Navigator.of(context).pop(); // Hide loading indicator
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('User not authenticated. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
         // Call the API to create customer
         final result = await ApiService.createCustomer(
-          userId: "1", // TODO: Get actual user ID from authentication
+          userId: userId.toString(),
           customerName: _customerNameController.text.trim(),
           companyName: _companyNameController.text.trim(),
           email: _emailController.text.trim(),

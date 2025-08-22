@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/item.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
+import '../utils/auth_utils.dart';
 
 class CreateItemScreen extends StatefulWidget {
   const CreateItemScreen({super.key});
@@ -1382,8 +1383,26 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         }
 
         print('🔍 [DEBUG] Creating item with image path: $_selectedImagePath');
+        
+        // Get actual user ID from auth service
+        final userId = await AuthUtils.getCurrentUserId();
+        if (userId == null) {
+          setState(() {
+            _isLoading = false;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('User not authenticated. Please login again.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
         final result = await ApiService.createItem(
-          userId: '1', // TODO: Get actual user ID from auth service
+          userId: userId.toString(),
           itemName: _nameController.text.trim(),
           unit: 'PCS',
           salesPriceAmount: _salesPriceController.text.trim().isNotEmpty ? _salesPriceController.text.trim() : null,
