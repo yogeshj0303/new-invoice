@@ -53,6 +53,8 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
   bool showColorPalette = false;
   Color selectedColor = Colors.indigo; // Default color
 
+
+
   Widget _buildColorOption(Color color, String label) {
     final isSelected = selectedColor == color;
     return GestureDetector(
@@ -246,30 +248,34 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               child: Center(
-                child: Container(
-                  width: 400,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    
-                  ),
-                  child: InvoiceTemplate(
-                    items: widget.items,
-                    subtotal: widget.subtotal,
-                    discount: widget.discount,
-                    tax: widget.tax,
-                    additionalCharges: widget.additionalCharges,
-                    additionalChargesTotal: widget.additionalChargesTotal,
-                    roundoff: widget.roundoff,
-                    total: widget.total,
-                    invoiceNumber: widget.invoiceNumber,
-                    date: widget.date,
-                    customerName: widget.customerName,
-                    customerPhone: widget.customerPhone,
-                    notes: widget.notes,
-                    paymentType: widget.paymentType,
-                    amountReceived: widget.amountReceived,
-                    primaryColor: primaryColor,
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 3.0,
+                  child: Container(
+                    width: 400,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      
+                    ),
+                    child: InvoiceTemplate(
+                      items: widget.items,
+                      subtotal: widget.subtotal,
+                      discount: widget.discount,
+                      tax: widget.tax,
+                      additionalCharges: widget.additionalCharges,
+                      additionalChargesTotal: widget.additionalChargesTotal,
+                      roundoff: widget.roundoff,
+                      total: widget.total,
+                      invoiceNumber: widget.invoiceNumber,
+                      date: widget.date,
+                      customerName: widget.customerName,
+                      customerPhone: widget.customerPhone,
+                      notes: widget.notes,
+                      paymentType: widget.paymentType,
+                      amountReceived: widget.amountReceived,
+                      primaryColor: primaryColor,
+                    ),
                   ),
                 ),
               ),
@@ -446,7 +452,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
   Future<void> _previewInvoice(BuildContext context) async {
     final pdf = pw.Document();
     
-    // Create PDF content using InvoiceTemplate
+    // Create PDF content that matches the InvoiceTemplate layout
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -456,7 +462,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header - matching InvoiceTemplate
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -468,6 +474,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                           style: pw.TextStyle(
                             fontSize: 24,
                             fontWeight: pw.FontWeight.bold,
+                            color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
                           ),
                         ),
                         pw.Text(
@@ -509,43 +516,106 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                   pw.SizedBox(height: 20),
                 ],
                 
-                // Items Table
+                // Items Table - matching InvoiceTemplate structure
                 pw.Table(
                   border: pw.TableBorder.all(),
                   children: [
                     pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey100),
                       children: [
-                        pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Qty', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Rate', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Amount', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('S.NO', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('ITEMS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('QTY', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('RATE', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('GST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('AMOUNT', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                       ],
                     ),
-                    ...widget.items.map((item) => pw.TableRow(
-                      children: [
-                        pw.Text(item['name']),
-                        pw.Text('${item['qty']}'),
-                        pw.Text('Rs. ${_formatPrice(item['price'])}'),
-                        pw.Text('Rs. ${_formatPrice(item['qty'] * item['price'])}'),
-                      ],
-                    )),
+                    ...widget.items.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      final itemTotal = item['qty'] * item['price'];
+                      final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+                      final itemTax = itemTotal * gstValue / 100;
+                      final itemTotalWithTax = itemTotal + itemTax;
+                      
+                      return pw.TableRow(
+                        decoration: pw.BoxDecoration(
+                          color: index.isEven ? PdfColors.grey50 : PdfColors.white,
+                        ),
+                        children: [
+                          pw.Text('${index + 1}'),
+                          pw.Text(item['name']),
+                          pw.Text('${item['qty']}'),
+                          pw.Text('Rs. ${_formatPrice(item['price'])}'),
+                          pw.Text('Rs. ${_formatPrice(itemTax)} (${gstValue.toStringAsFixed(1)}%)'),
+                          pw.Text(
+                            'Rs. ${_formatPrice(itemTotalWithTax)}',
+                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                          ),
+                        ],
+                      );
+                    }),
                   ],
                 ),
                 
+                // Additional Charges Table (if any)
+                if (widget.additionalCharges.isNotEmpty) ...[
+                  pw.SizedBox(height: 20),
+                  pw.Table(
+                    border: pw.TableBorder.all(),
+                    children: [
+                      pw.TableRow(
+                        decoration: pw.BoxDecoration(color: PdfColors.grey100),
+                        children: [
+                          pw.Text('S.NO', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('Additional Charges', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('Amount', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ],
+                      ),
+                      ...widget.additionalCharges.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final charge = entry.value;
+                        
+                        return pw.TableRow(
+                          decoration: pw.BoxDecoration(
+                            color: index.isEven ? PdfColors.grey50 : PdfColors.white,
+                          ),
+                          children: [
+                            pw.Text('${index + 1}'),
+                            pw.Text(charge['name']),
+                            pw.Text('Rs. ${_formatPrice(charge['price'])}'),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                ],
+                
                 pw.SizedBox(height: 20),
                 
-                // Summary
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.end,
+                // GST Breakdown - matching InvoiceTemplate
+                pw.Table(
+                  border: pw.TableBorder.all(),
                   children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey100),
                       children: [
-                        pw.Text('Subtotal: Rs. ${_formatPrice(_calculateSubtotal())}'),
-                        if (widget.discount > 0) pw.Text('Discount: -Rs. ${_formatPrice(widget.discount)}'),
-                        pw.Text('Tax: Rs. ${_formatPrice(_calculateTotalTax())}'),
+                        pw.Text('HSN/SAC', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Taxable Value', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('CGST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('SGST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Total GST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Text('GST'),
+                        pw.Text('Rs. ${_formatPrice(_calculateSubtotal())}'),
+                        pw.Text('${(_getTaxRate() / 2).toStringAsFixed(1)}%\nRs. ${_formatPrice(_calculateCGST())}'),
+                        pw.Text('${(_getTaxRate() / 2).toStringAsFixed(1)}%\nRs. ${_formatPrice(_calculateSGST())}'),
                         pw.Text(
-                          'Total: Rs. ${_formatPrice(widget.total)}',
+                          'Rs. ${_formatPrice(_calculateTotalTax())}',
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                       ],
@@ -553,10 +623,204 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                   ],
                 ),
                 
-                if (widget.notes.isNotEmpty) ...[
-                  pw.SizedBox(height: 20),
-                  pw.Text('Notes: ${widget.notes}'),
-                ],
+                pw.SizedBox(height: 20),
+                
+                // Summary - matching InvoiceTemplate
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                                              pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Subtotal:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Rs. ${_formatPrice(_calculateSubtotal())}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                      if (widget.additionalCharges.isNotEmpty) ...[
+                        pw.SizedBox(height: 5),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Additional Charges:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Rs. ${_formatPrice(widget.additionalChargesTotal)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                      if (widget.discount > 0) ...[
+                        pw.SizedBox(height: 5),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Discount:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('- Rs. ${_formatPrice(widget.discount)}', style: pw.TextStyle(color: PdfColors.red600)),
+                          ],
+                        ),
+                      ],
+                      if (widget.roundoff != 0) ...[
+                        pw.SizedBox(height: 5),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Roundoff (Decimal):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text(
+                              widget.roundoff > 0
+                                  ? '+ Rs. ${_formatPrice(widget.roundoff)}'
+                                  : '- Rs. ${_formatPrice(widget.roundoff * -1)}',
+                              style: pw.TextStyle(
+                                color: widget.roundoff > 0 ? PdfColors.green600 : PdfColors.red600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      pw.SizedBox(height: 10),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 5),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300)),
+                        ),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              'TOTAL:',
+                              style: pw.TextStyle(
+                                fontSize: 16,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex(selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)),
+                              ),
+                            ),
+                            pw.Text(
+                              'Rs. ${_formatPrice(widget.total)}',
+                              style: pw.TextStyle(
+                                fontSize: 16,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (widget.amountReceived > 0) ...[
+                        pw.SizedBox(height: 10),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('RECEIVED:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Rs. ${_formatPrice(widget.amountReceived)}', style: pw.TextStyle(color: PdfColors.green600)),
+                          ],
+                        ),
+                        pw.SizedBox(height: 5),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('BALANCE:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Rs. ${_formatPrice(widget.amountReceived - widget.total)}', style: pw.TextStyle(color: PdfColors.blue600)),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                
+                // Amount in Words
+                pw.SizedBox(height: 20),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Amount in Words:',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.SizedBox(height: 5),
+                      pw.Text(
+                        _amountInWords(widget.total),
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontStyle: pw.FontStyle.italic,
+                          color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Terms
+                pw.SizedBox(height: 20),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Terms:',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.SizedBox(height: 5),
+                      pw.Text('1. Goods once sold will not be taken back or exchanged'),
+                      pw.Text('2. All disputes are subject to local jurisdiction only'),
+                    ],
+                  ),
+                ),
+                
+                // Footer
+                pw.SizedBox(height: 20),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(10),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Thank you for your business!',
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                              ),
+                            ),
+                            pw.SizedBox(height: 5),
+                            pw.Text(
+                              'ACT T CONNECT',
+                              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
+                            pw.Text(
+                              'Invoice created using ACT T Connect',
+                              style: pw.TextStyle(
+                                fontStyle: pw.FontStyle.italic,
+                                color: PdfColors.grey600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
@@ -573,7 +837,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
     try {
       final pdf = pw.Document();
       
-      // Create PDF content similar to preview
+      // Create PDF content that matches the InvoiceTemplate layout (same as preview)
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -583,7 +847,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Header
+                  // Header - matching InvoiceTemplate
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
@@ -595,6 +859,7 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                             style: pw.TextStyle(
                               fontSize: 24,
                               fontWeight: pw.FontWeight.bold,
+                              color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
                             ),
                           ),
                           pw.Text(
@@ -636,43 +901,106 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                     pw.SizedBox(height: 20),
                   ],
                   
-                  // Items Table
+                  // Items Table - matching InvoiceTemplate structure
                   pw.Table(
                     border: pw.TableBorder.all(),
                     children: [
                       pw.TableRow(
+                        decoration: pw.BoxDecoration(color: PdfColors.grey100),
                         children: [
-                          pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                          pw.Text('Qty', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                          pw.Text('Rate', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                          pw.Text('Amount', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('S.NO', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('ITEMS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('QTY', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('RATE', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('GST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('AMOUNT', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                         ],
                       ),
-                      ...widget.items.map((item) => pw.TableRow(
-                        children: [
-                          pw.Text(item['name']),
-                          pw.Text('${item['qty']}'),
-                          pw.Text('Rs. ${_formatPrice(item['price'])}'),
-                          pw.Text('Rs. ${_formatPrice(item['qty'] * item['price'])}'),
-                        ],
-                      )),
+                      ...widget.items.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        final itemTotal = item['qty'] * item['price'];
+                        final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+                        final itemTax = itemTotal * gstValue / 100;
+                        final itemTotalWithTax = itemTotal + itemTax;
+                        
+                        return pw.TableRow(
+                          decoration: pw.BoxDecoration(
+                            color: index.isEven ? PdfColors.grey50 : PdfColors.white,
+                          ),
+                          children: [
+                            pw.Text('${index + 1}'),
+                            pw.Text(item['name']),
+                            pw.Text('${item['qty']}'),
+                            pw.Text('Rs. ${_formatPrice(item['price'])}'),
+                            pw.Text('Rs. ${_formatPrice(itemTax)} (${gstValue.toStringAsFixed(1)}%)'),
+                            pw.Text(
+                              'Rs. ${_formatPrice(itemTotalWithTax)}',
+                              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            ),
+                          ],
+                        );
+                      }),
                     ],
                   ),
                   
+                  // Additional Charges Table (if any)
+                  if (widget.additionalCharges.isNotEmpty) ...[
+                    pw.SizedBox(height: 20),
+                    pw.Table(
+                      border: pw.TableBorder.all(),
+                      children: [
+                        pw.TableRow(
+                          decoration: pw.BoxDecoration(color: PdfColors.grey100),
+                          children: [
+                            pw.Text('S.NO', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Additional Charges', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Amount', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                        ...widget.additionalCharges.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final charge = entry.value;
+                          
+                          return pw.TableRow(
+                            decoration: pw.BoxDecoration(
+                              color: index.isEven ? PdfColors.grey50 : PdfColors.white,
+                            ),
+                            children: [
+                              pw.Text('${index + 1}'),
+                              pw.Text(charge['name']),
+                              pw.Text('Rs. ${_formatPrice(charge['price'])}'),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
+                  
                   pw.SizedBox(height: 20),
                   
-                  // Summary
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.end,
+                  // GST Breakdown - matching InvoiceTemplate
+                  pw.Table(
+                    border: pw.TableBorder.all(),
                     children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      pw.TableRow(
+                        decoration: pw.BoxDecoration(color: PdfColors.grey100),
                         children: [
-                          pw.Text('Subtotal: Rs. ${_formatPrice(_calculateSubtotal())}'),
-                          if (widget.discount > 0) pw.Text('Discount: -Rs. ${_formatPrice(widget.discount)}'),
-                          pw.Text('Tax: Rs. ${_formatPrice(_calculateTotalTax())}'),
+                          pw.Text('HSN/SAC', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('Taxable Value', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('CGST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('SGST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text('Total GST', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ],
+                      ),
+                      pw.TableRow(
+                        children: [
+                          pw.Text('GST'),
+                          pw.Text('Rs. ${_formatPrice(_calculateSubtotal())}'),
+                          pw.Text('${(_getTaxRate() / 2).toStringAsFixed(1)}%\nRs. ${_formatPrice(_calculateCGST())}'),
+                          pw.Text('${(_getTaxRate() / 2).toStringAsFixed(1)}%\nRs. ${_formatPrice(_calculateSGST())}'),
                           pw.Text(
-                            'Total: Rs. ${_formatPrice(widget.total)}',
+                            'Rs. ${_formatPrice(_calculateTotalTax())}',
                             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                           ),
                         ],
@@ -680,10 +1008,204 @@ class _InvoiceCreatedScreenState extends State<InvoiceCreatedScreen> {
                     ],
                   ),
                   
-                  if (widget.notes.isNotEmpty) ...[
-                    pw.SizedBox(height: 20),
-                    pw.Text('Notes: ${widget.notes}'),
-                  ],
+                  pw.SizedBox(height: 20),
+                  
+                  // Summary - matching InvoiceTemplate
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Subtotal:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            pw.Text('Rs. ${_formatPrice(_calculateSubtotal())}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                        if (widget.additionalCharges.isNotEmpty) ...[
+                          pw.SizedBox(height: 5),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('Additional Charges:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              pw.Text('Rs. ${_formatPrice(widget.additionalChargesTotal)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                            ],
+                          ),
+                        ],
+                        if (widget.discount > 0) ...[
+                          pw.SizedBox(height: 5),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('Discount:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              pw.Text('- Rs. ${_formatPrice(widget.discount)}', style: pw.TextStyle(color: PdfColors.red600)),
+                            ],
+                          ),
+                        ],
+                        if (widget.roundoff != 0) ...[
+                          pw.SizedBox(height: 5),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('Roundoff (Decimal):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              pw.Text(
+                                widget.roundoff > 0
+                                    ? '+ Rs. ${_formatPrice(widget.roundoff)}'
+                                    : '- Rs. ${_formatPrice(widget.roundoff * -1)}',
+                                style: pw.TextStyle(
+                                  color: widget.roundoff > 0 ? PdfColors.green600 : PdfColors.red600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        pw.SizedBox(height: 10),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 5),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300)),
+                          ),
+                          child: pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text(
+                                'TOTAL:',
+                                style: pw.TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                                ),
+                              ),
+                              pw.Text(
+                                'Rs. ${_formatPrice(widget.total)}',
+                                style: pw.TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (widget.amountReceived > 0) ...[
+                          pw.SizedBox(height: 10),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('RECEIVED:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              pw.Text('Rs. ${_formatPrice(widget.amountReceived)}', style: pw.TextStyle(color: PdfColors.green600)),
+                            ],
+                          ),
+                          pw.SizedBox(height: 5),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text('BALANCE:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                              pw.Text('Rs. ${_formatPrice(widget.amountReceived - widget.total)}', style: pw.TextStyle(color: PdfColors.blue600)),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  
+                  // Amount in Words
+                  pw.SizedBox(height: 20),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'Amount in Words:',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.SizedBox(height: 5),
+                        pw.Text(
+                          _amountInWords(widget.total),
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontStyle: pw.FontStyle.italic,
+                            color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Terms
+                  pw.SizedBox(height: 20),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'Terms:',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.SizedBox(height: 5),
+                        pw.Text('1. Goods once sold will not be taken back or exchanged'),
+                        pw.Text('2. All disputes are subject to local jurisdiction only'),
+                      ],
+                    ),
+                  ),
+                  
+                  // Footer
+                  pw.SizedBox(height: 20),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300),
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(
+                                'Thank you for your business!',
+                                style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColor.fromHex(selectedColor.value.toRadixString(16).substring(2)),
+                                ),
+                              ),
+                              pw.SizedBox(height: 5),
+                              pw.Text(
+                                'ACT T CONNECT',
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.end,
+                            children: [
+                              pw.Text(
+                                'Invoice created using ACT T Connect',
+                                style: pw.TextStyle(
+                                  fontStyle: pw.FontStyle.italic,
+                                  color: PdfColors.grey600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );

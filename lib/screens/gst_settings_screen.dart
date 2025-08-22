@@ -112,23 +112,26 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Invoice Template Preview - Matching InvoiceTemplate structure
-                      Center(
-                        child: Container(
-                          width: 400,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(3),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
+                                             // Invoice Template Preview - Matching InvoiceTemplate structure
+                       Center(
+                         child: InteractiveViewer(
+                           minScale: 0.5,
+                           maxScale: 3.0,
+                           child: Container(
+                             width: 400,
+                             decoration: BoxDecoration(
+                               color: Colors.white,
+                               borderRadius: BorderRadius.circular(3),
+                               boxShadow: [
+                                 BoxShadow(
+                                   color: Colors.black.withOpacity(0.1),
+                                   blurRadius: 8,
+                                   offset: const Offset(0, 3),
+                                 ),
+                               ],
+                             ),
+                             child: Column(
+                               children: [
                               // Ultra-Compact Header
                               Container(
                                 width: double.infinity,
@@ -862,6 +865,7 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                                                 ),
                                               ),
                                               child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.center,
                                                 children: [
                                                   Text(
                                                     '9.0%',
@@ -879,7 +883,6 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                                                     ),
                                                   ),
                                                 ],
-                                                crossAxisAlignment: CrossAxisAlignment.center,
                                               ),
                                             ),
                                           ),
@@ -899,6 +902,7 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                                                 ),
                                               ),
                                               child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.center,
                                                 children: [
                                                   Text(
                                                     '9.0%',
@@ -916,7 +920,6 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                                                     ),
                                                   ),
                                                 ],
-                                                crossAxisAlignment: CrossAxisAlignment.center,
                                               ),
                                             ),
                                           ),
@@ -1119,8 +1122,8 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                           ),
                         ),
                       ),
-                      
-                                             const SizedBox(height: 20),
+                       ),
+                      const SizedBox(height: 20),
                        
                        // Color Customization Section
                        Text(
