@@ -4,6 +4,7 @@ import '../constants/api_constants.dart';
 import '../models/business_profile.dart';
 import '../models/customer.dart';
 import '../models/user.dart';
+import '../models/transaction.dart';
 import '../utils/auth_utils.dart';
 import 'dart:io'; // Added for File and Platform
 import '../models/item.dart'; // Added for Item
@@ -1687,6 +1688,102 @@ class ApiService {
         'success': false,
         ApiConstants.messageKey: 'Validation error: ${e.toString()}',
         'invoice': null,
+      };
+    }
+  }
+
+  // Get Transactions API
+  static Future<Map<String, dynamic>> getTransactions([int? userId]) async {
+    try {
+      // Use provided userId or get current user ID
+      userId = 1;
+      final currentUserId = userId ?? await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'transactions': [],
+        };
+      }
+      
+      final url = '${ApiConstants.baseURL}${ApiConstants.transactions}/$currentUserId';
+      
+      print('🔍 [DEBUG] Get Transactions Request:');
+      print('URL: $url');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Get Transactions Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data is List) {
+          // Parse the transactions list from response
+          List<Transaction> transactions = [];
+          try {
+            transactions = data
+                .map((transactionJson) => Transaction.fromJson(transactionJson))
+                .toList();
+            print('✅ [DEBUG] Successfully parsed ${transactions.length} transactions from response');
+          } catch (parseError) {
+            print('⚠️ [DEBUG] Error parsing transactions from response: $parseError');
+            transactions = [];
+          }
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: 'Transactions loaded successfully',
+            'transactions': transactions,
+          };
+        } else {
+          return {
+            'success': true,
+            ApiConstants.messageKey: 'No transactions found',
+            'transactions': [],
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to load transactions';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+          'transactions': [],
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+        'transactions': [],
       };
     }
   }

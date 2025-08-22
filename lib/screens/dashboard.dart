@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'calculator_screen.dart';
+import '../services/api_service.dart';
+import '../models/transaction.dart';
+import '../constants/api_constants.dart';
 
 // Placeholder for other screens
 class HomeDashboard extends StatefulWidget {
@@ -15,6 +18,46 @@ class _HomeDashboardState extends State<HomeDashboard> {
   // Theme colors
   static const Color primaryColor = Color(0xFF2E3085);
   static const Color secondaryColor = Color(0xFF4E4AA8);
+  
+  // Transaction data
+  List<Transaction> _transactions = [];
+  bool _isLoadingTransactions = false;
+  String? _transactionError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  // Load transactions from API
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoadingTransactions = true;
+      _transactionError = null;
+    });
+
+    try {
+      final result = await ApiService.getTransactions();
+      
+      if (result['success'] == true) {
+        setState(() {
+          _transactions = result['transactions'] ?? [];
+          _isLoadingTransactions = false;
+        });
+      } else {
+        setState(() {
+          _transactionError = result[ApiConstants.messageKey] ?? 'Failed to load transactions';
+          _isLoadingTransactions = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _transactionError = 'Error loading transactions: $e';
+        _isLoadingTransactions = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,10 +138,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
+      body: RefreshIndicator(
+        onRefresh: _loadTransactions,
+        color: primaryColor,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // --- Trial Expiration Banner ---
@@ -218,7 +264,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _CompactDashboardCard(
                     icon: null,
                     title: '',
-                    value: '₹ 440',
+                    value: _getTotalToCollect(),
                     color: Colors.green[100]!,
                     subtitle: 'To Collect',
                     small: true,
@@ -232,7 +278,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _CompactDashboardCard(
                     icon: null,
                     title: '',
-                    value: '₹ 440',
+                    value: _getWeeklySales(),
                     color: Color(0xFFE3F2FD), // Light blue background
                     subtitle: "This week's sale",
                     small: true,
@@ -244,7 +290,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _CompactDashboardCard(
                     icon: null,
                     title: '',
-                    value: 'Total Balance',
+                    value: _getTotalBalance(),
                     color: Color(0xFFF3E5F5), // Light purple background
                     subtitle: 'Cash + Bank Balance',
                     small: true,
@@ -298,6 +344,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: _loadTransactions,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.refresh,
+                            color: primaryColor,
+                            size: 16,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -305,49 +367,183 @@ class _HomeDashboardState extends State<HomeDashboard> {
               SizedBox(height: 10),
 
               // Transactions List
-              Column(
-                children: [
-                  _InvoiceTransactionItem(
-                    customerName: 'Priya Sharma 💫',
-                    invoiceNumber: 'Invoice #5',
-                    dueDate: '06 Aug • 6 day(s) to due',
-                    amount: '₹ 1,250',
-                    status: 'Unpaid',
-                    isTablet: isTablet,
-                  ),
-                  SizedBox(height: 8),
-                  _InvoiceTransactionItem(
-                    customerName: 'Rajesh Kumar 🏢',
-                    invoiceNumber: 'Invoice #4',
-                    dueDate: '05 Aug • 5 day(s) to due',
-                    amount: '₹ 3,450',
-                    status: 'Paid',
-                    isTablet: isTablet,
-                  ),
-                  SizedBox(height: 8),
-                  _InvoiceTransactionItem(
-                    customerName: 'Anita Patel 🌟',
-                    invoiceNumber: 'Invoice #6',
-                    dueDate: '07 Aug • 7 day(s) to due',
-                    amount: '₹ 890',
-                    status: 'Unpaid',
-                    isTablet: isTablet,
-                  ),
-                  SizedBox(height: 8),
-                  _InvoiceTransactionItem(
-                    customerName: 'Vikram Singh 💼',
-                    invoiceNumber: 'Invoice #7',
-                    dueDate: '08 Aug • 8 day(s) to due',
-                    amount: '₹ 2,100',
-                    status: 'Overdue',
-                    isTablet: isTablet,
-                  ),
-                ],
+              _buildTransactionsList(isTablet),
+            ],
+          ),
+        ),
+        ),
+      ),
+    );
+  }
+
+  // Calculate weekly sales from transactions
+  String _getWeeklySales() {
+    if (_transactions.isEmpty) return '₹ 0';
+    
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final weekEnd = weekStart.add(Duration(days: 6));
+    
+    double totalSales = 0;
+    for (final transaction in _transactions) {
+      try {
+        final transactionDate = DateTime.parse(transaction.date);
+        if (transactionDate.isAfter(weekStart.subtract(Duration(days: 1))) && 
+            transactionDate.isBefore(weekEnd.add(Duration(days: 1)))) {
+          totalSales += double.tryParse(transaction.invoice.totalAmount) ?? 0;
+        }
+      } catch (e) {
+        // Skip invalid dates
+        continue;
+      }
+    }
+    
+    return '₹ ${totalSales.toStringAsFixed(0)}';
+  }
+
+  // Calculate total amount to collect from transactions
+  String _getTotalToCollect() {
+    if (_transactions.isEmpty) return '₹ 0';
+    
+    double totalToCollect = 0;
+    for (final transaction in _transactions) {
+      if (transaction.status.toLowerCase() == 'unpaid' || 
+          transaction.status.toLowerCase() == 'overdue') {
+        totalToCollect += double.tryParse(transaction.invoice.totalAmount) ?? 0;
+      }
+    }
+    
+    return '₹ ${totalToCollect.toStringAsFixed(0)}';
+  }
+
+  // Calculate total balance from transactions
+  String _getTotalBalance() {
+    if (_transactions.isEmpty) return '₹ 0';
+    
+    double totalBalance = 0;
+    for (final transaction in _transactions) {
+      if (transaction.status.toLowerCase() == 'paid') {
+        totalBalance += double.tryParse(transaction.invoice.amountReceived) ?? 0;
+      }
+    }
+    
+    return '₹ ${totalBalance.toStringAsFixed(0)}';
+  }
+
+  // Build transactions list
+  Widget _buildTransactionsList(bool isTablet) {
+    if (_isLoadingTransactions) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        child: Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(color: primaryColor),
+              SizedBox(height: 16),
+              Text(
+                'Loading transactions...',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
               ),
             ],
           ),
         ),
-      ),
+      );
+    }
+
+    if (_transactionError != null) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Colors.red[400],
+                size: 48,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Failed to load transactions',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red[700],
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                _transactionError!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadTransactions,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_transactions.isEmpty) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                color: Colors.grey[400],
+                size: 48,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'No transactions found',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Your transactions will appear here once you create invoices',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _transactions.take(5).map((transaction) {
+        return Column(
+          children: [
+            _TransactionItem(
+              transaction: transaction,
+              isTablet: isTablet,
+            ),
+            SizedBox(height: 8),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -1079,74 +1275,276 @@ class _InvoiceTransactionItem extends StatelessWidget {
             ],
           ),
           SizedBox(height: 12),
-          // Action buttons
+          // Action buttons - only show if transaction is not paid
+          if (status.toLowerCase() != 'paid') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Handle Record Manually action
+                    },
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.currency_rupee,
+                            size: 14,
+                            color: Colors.grey[700],
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Record Manually',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Handle Share Payment Link action
+                    },
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.message, size: 14, color: Colors.green[600]),
+                          SizedBox(width: 4),
+                          Text(
+                            'Share Payment Link',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// New widget for transaction items using API data
+class _TransactionItem extends StatelessWidget {
+  final Transaction transaction;
+  final bool isTablet;
+
+  const _TransactionItem({
+    required this.transaction,
+    required this.isTablet,
+  });
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return Colors.green[700]!;
+      case 'unpaid':
+        return Colors.red[700]!;
+      case 'overdue':
+        return Colors.orange[700]!;
+      default:
+        return Colors.grey[700]!;
+    }
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date).inDays;
+      
+      if (difference == 0) {
+        return 'Today';
+      } else if (difference == 1) {
+        return 'Yesterday';
+      } else if (difference < 7) {
+        return '${difference} day(s) ago';
+      } else {
+        return '${date.day} ${_getMonthName(date.month)}';
+      }
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Customer name
+          Text(
+            transaction.customerName,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 4),
+          // Invoice details and amount/status row
           Row(
             children: [
               Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // Handle Record Manually action
-                  },
-                  child: Container(
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Invoice #${transaction.invoice.id}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.currency_rupee,
-                          size: 14,
-                          color: Colors.grey[700],
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Record Manually',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    SizedBox(height: 8),
+                    Text(
+                      _formatDate(transaction.date),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              SizedBox(width: 8),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // Handle Share Payment Link action
-                  },
-                  child: Container(
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.message, size: 14, color: Colors.green[600]),
-                        SizedBox(width: 4),
-                        Text(
-                          'Share Payment Link',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.green[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹ ${transaction.invoice.totalAmount}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.black87,
                     ),
                   ),
-                ),
+                  SizedBox(height: 4),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(transaction.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      transaction.status.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: _getStatusColor(transaction.status),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          SizedBox(height: 12),
+          // Action buttons - only show if transaction is not paid
+          if (transaction.status.toLowerCase() != 'paid') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Handle Record Manually action
+                    },
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.currency_rupee,
+                            size: 14,
+                            color: Colors.grey[700],
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Record Manually',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Handle Share Payment Link action
+                    },
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.message, size: 14, color: Colors.green[600]),
+                          SizedBox(width: 4),
+                          Text(
+                            'Share Payment Link',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
