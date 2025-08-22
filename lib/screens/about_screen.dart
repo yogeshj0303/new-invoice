@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'terms_of_service_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'acceptable_use_policy_screen.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -153,9 +156,7 @@ class _AboutScreenState extends State<AboutScreen> {
       ),
       child: Column(
         children: [
-          _buildVersionItem('Version Number', 'v7.34.0(353)'),
-          const Divider(height: 1, color: borderColor),
-          _buildVersionItem('Invoice Version', 'v5.4.1'),
+          _buildVersionItem('Invoice Version', 'v25.1.0'),
         ],
       ),
     );
@@ -202,22 +203,31 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   void _showPolicyDialog(String policyName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(policyName),
-          content: const Text(
-            'This policy content will be displayed here. Please contact support for the complete policy document.',
+    switch (policyName) {
+      case 'Terms of Service':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TermsOfServiceScreen(),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
         );
-      },
-    );
+        break;
+      case 'Privacy Policy':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PrivacyPolicyScreen(),
+          ),
+        );
+        break;
+      case 'Acceptable Use Policy':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AcceptableUsePolicyScreen(),
+          ),
+        );
+        break;
+    }
   }
 } 
