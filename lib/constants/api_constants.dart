@@ -13,6 +13,7 @@ class ApiConstants {
   static const String updateItem = '/api/items';
   static const String invoices = '/api/invoices';
   static const String transactions = '/api/transactions/user';
+  static const String subscriptions = '/api/subscriptions';
   
   // API Headers
   static const Map<String, String> defaultHeaders = {

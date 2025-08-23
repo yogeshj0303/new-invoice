@@ -926,14 +926,14 @@ class _MenuScreenState extends State<MenuScreen> {
                   Navigator.pushNamed(context, '/account-settings');
                 },
               ),
-              const Divider(height: 1, color: Color(0xFFE9ECEF)),
-              _buildSettingsListTile(
-                'Reminder Settings',
-                Icons.notifications_outlined,
-                () {
-                  Navigator.pushNamed(context, '/reminder-settings');
-                },
-              ),
+              // const Divider(height: 1, color: Color(0xFFE9ECEF)),
+              // _buildSettingsListTile(
+              //   'Reminder Settings',
+              //   Icons.notifications_outlined,
+              //   () {
+              //     Navigator.pushNamed(context, '/reminder-settings');
+              //   },
+              // ),
               const Divider(height: 1, color: Color(0xFFE9ECEF)),
               _buildSettingsListTile(
                 'About',

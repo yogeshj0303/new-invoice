@@ -9,6 +9,7 @@ import '../utils/auth_utils.dart';
 import 'dart:io'; // Added for File and Platform
 import '../models/item.dart'; // Added for Item
 import '../models/detailed_invoice.dart'; // Added for DetailedInvoice
+import '../models/subscription.dart'; // Added for Subscription
 import '../services/fcm_service.dart';
 
 class ApiService {
@@ -2023,6 +2024,88 @@ class ApiService {
         'success': false,
         ApiConstants.messageKey: 'Error creating invoice data: ${e.toString()}',
         'detailedInvoice': null,
+      };
+    }
+  }
+
+  // Get Subscriptions API
+  static Future<Map<String, dynamic>> getSubscriptions() async {
+    try {
+      print('🔍 [DEBUG] Get Subscriptions Request:');
+      final url = '${ApiConstants.baseURL}${ApiConstants.subscriptions}';
+      print('   URL: $url');
+      print('   Headers: ${ApiConstants.defaultHeaders}');
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Get Subscriptions Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['success'] == true && data['data'] != null) {
+          final List<dynamic> subscriptionsData = data['data'];
+          final List<Subscription> subscriptions = subscriptionsData
+              .map((json) => Subscription.fromJson(json))
+              .toList();
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: 'Subscriptions fetched successfully',
+            'subscriptions': subscriptions,
+          };
+        } else if (data['data'] != null) {
+          // Handle case where API doesn't have 'success' field but has 'data'
+          final List<dynamic> subscriptionsData = data['data'];
+          final List<Subscription> subscriptions = subscriptionsData
+              .map((json) => Subscription.fromJson(json))
+              .toList();
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: 'Subscriptions fetched successfully',
+            'subscriptions': subscriptions,
+          };
+        } else {
+          print('❌ [DEBUG] API returned success: false or no data');
+          return {
+            'success': false,
+            ApiConstants.messageKey: 'No subscriptions found',
+            'subscriptions': <Subscription>[],
+          };
+        }
+      } else {
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        String errorMessage = 'Failed to fetch subscriptions';
+        
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          'subscriptions': <Subscription>[],
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred while fetching subscriptions: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        'subscriptions': <Subscription>[],
       };
     }
   }
