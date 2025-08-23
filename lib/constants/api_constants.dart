@@ -15,6 +15,8 @@ class ApiConstants {
   static const String transactions = '/api/transactions/user';
   static const String updateTransactionStatus = '/api/transactions/status-change';
   static const String subscriptions = '/api/subscriptions';
+  static const String validateCoupon = '/api/validate-coupon';
+  static const String availableCoupons = '/api/available-coupons';
   
   // API Headers
   static const Map<String, String> defaultHeaders = {

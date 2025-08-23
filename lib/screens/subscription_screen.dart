@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import '../models/subscription.dart';
+import '../models/coupon.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
 
@@ -27,6 +28,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
   List<Subscription> _subscriptions = [];
   bool _isLoading = true;
   String? _errorMessage;
+
+  // Coupon functionality
+  Coupon? _appliedCoupon;
+  final TextEditingController _manualCouponController = TextEditingController();
+  
+  // Available coupons from API
+  List<Coupon> _availableCoupons = [];
+  bool _isLoadingCoupons = false;
 
   // Convert API subscriptions to UI plans
   List<SubscriptionPlan> get plans {
@@ -148,6 +157,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     
     // Fetch subscriptions from API
     _fetchSubscriptions();
+    
+    // Fetch available coupons from API
+    _fetchAvailableCoupons();
   }
 
   // Fetch subscriptions from API
@@ -231,6 +243,93 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     );
   }
 
+  // Fetch available coupons from API
+  Future<void> _fetchAvailableCoupons() async {
+    try {
+      setState(() {
+        _isLoadingCoupons = true;
+      });
+
+      final result = await ApiService.getAvailableCoupons();
+      
+      if (result['success'] == true) {
+        setState(() {
+          _availableCoupons = List<Coupon>.from(result['coupons']);
+          _isLoadingCoupons = false;
+        });
+        
+        // Debug: Print loaded coupons
+        if (_availableCoupons.isNotEmpty) {
+          print('✅ [DEBUG] Loaded ${_availableCoupons.length} available coupons:');
+          for (var coupon in _availableCoupons) {
+            print('   - ${coupon.couponCode}: ${coupon.discount}% off');
+          }
+        } else {
+          print('ℹ️ [INFO] No coupons available at the moment');
+        }
+      } else {
+        setState(() {
+          _isLoadingCoupons = false;
+        });
+        print('❌ [ERROR] Failed to fetch coupons: ${result['message']}');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingCoupons = false;
+      });
+      print('❌ [ERROR] Network error fetching coupons: ${e.toString()}');
+    }
+  }
+
+  // Apply coupon directly from the available coupons list
+  void _applyCouponDirectly(Coupon coupon) {
+    setState(() {
+      _appliedCoupon = coupon;
+    });
+    
+    Navigator.pop(context);
+    _showCouponAppliedSnackBar();
+  }
+
+  // Validate and apply coupon manually
+  Future<void> _validateAndApplyCoupon(String couponCode) async {
+    if (couponCode.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a coupon code'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await ApiService.validateCoupon(couponCode.trim());
+      
+      if (result['success'] == true && result['coupon'] != null) {
+        setState(() {
+          _appliedCoupon = result['coupon'] as Coupon;
+        });
+        
+        _showCouponAppliedSnackBar();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result[ApiConstants.messageKey] ?? 'Invalid coupon code'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
 
 
   void _handleSubscription() {
@@ -310,6 +409,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     _pageController.dispose();
     _buttonController.dispose();
     _staggerController.dispose();
+    _manualCouponController.dispose();
     super.dispose();
   }
 
@@ -780,12 +880,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _appliedCoupon != null 
+                      ? const Color(0xFF10B981).withOpacity(0.05)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(12),
+                  border: _appliedCoupon != null
+                      ? Border.all(color: const Color(0xFF10B981).withOpacity(0.3), width: 1)
+                      : null,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
+                      color: _appliedCoupon != null
+                          ? const Color(0xFF10B981).withOpacity(0.1)
+                          : Colors.black.withOpacity(0.04),
+                      blurRadius: _appliedCoupon != null ? 12 : 8,
                       offset: const Offset(0, 3),
                     ),
                   ],
@@ -796,38 +903,109 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6).withOpacity(0.1),
+                        color: _appliedCoupon != null
+                            ? const Color(0xFF10B981).withOpacity(0.15)
+                            : const Color(0xFF3B82F6).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.percent,
-                        color: Color(0xFF3B82F6),
+                      child: Icon(
+                        _appliedCoupon != null ? Icons.check_circle : Icons.percent,
+                        color: _appliedCoupon != null 
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFF3B82F6),
                         size: 16,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Apply Coupon Code',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2937),
+                                         Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Text(
+                             _appliedCoupon != null 
+                                 ? 'Coupon Applied'
+                                 : 'Apply Coupon Code',
+                             style: TextStyle(
+                               fontSize: 13,
+                               fontWeight: FontWeight.w600,
+                               color: _appliedCoupon != null
+                                   ? const Color(0xFF10B981)
+                                   : const Color(0xFF1F2937),
+                             ),
+                           ),
+                           if (_appliedCoupon != null) ...[
+                             const SizedBox(height: 2),
+                             Text(
+                               '${_appliedCoupon!.couponCode} - ${_appliedCoupon!.discount}% off',
+                               style: TextStyle(
+                                 fontSize: 11,
+                                 color: const Color(0xFF10B981),
+                                 fontWeight: FontWeight.w500,
+                               ),
+                             ),
+                           ] else if (_isLoadingCoupons) ...[
+                             const SizedBox(height: 2),
+                             Text(
+                               'Loading coupons...',
+                               style: TextStyle(
+                                 fontSize: 11,
+                                 color: Colors.grey[500],
+                                 fontWeight: FontWeight.w500,
+                               ),
+                             ),
+                                                       ] else if (_availableCoupons.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_availableCoupons.length} coupons available',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: const Color(0xFF3B82F6),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'No coupons available',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                         ],
+                       ),
+                     ),
+                    if (_appliedCoupon != null)
+                      GestureDetector(
+                        onTap: _removeCoupon,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(
+                            Icons.close,
+                            color: Colors.red[400],
+                            size: 14,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.grey[600],
+                          size: 14,
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.grey[600],
-                        size: 14,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -843,14 +1021,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      useSafeArea: true,
+      useSafeArea: false,
       isDismissible: true,
       enableDrag: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
+      ),
       builder: (context) => _buildCouponBottomSheet(),
     );
   }
 
-  Widget _buildCouponBottomSheet() {
+    Widget _buildCouponBottomSheet() {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -859,176 +1040,197 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
           topRight: Radius.circular(20),
         ),
       ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
             ),
-            const SizedBox(height: 16),
-            
-            // Title
-            const Text(
-              'Apply Coupon Code',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1F2937),
-              ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Title
+          const Text(
+            'Enter Coupon Code',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1F2937),
             ),
-            const SizedBox(height: 6),
-            
-            // Subtitle
-            Text(
-              'Enter your coupon code to get exclusive discounts',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          
+          // Subtitle
+          Text(
+            'Enter your coupon code to get exclusive discounts',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 20),
-            
-            // Coupon input field
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Enter coupon code',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 15,
-                  ),
-                  border: InputBorder.none,
-                  suffixIcon: Icon(
-                    Icons.confirmation_number,
-                    color: Colors.grey[400],
-                    size: 18,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          
+          // Manual coupon input field
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _manualCouponController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter coupon code',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 15,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    onSubmitted: (value) => _validateAndApplyCoupon(value),
                   ),
                 ),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Apply button
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              width: double.infinity,
-              height: 46,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: plans[selectedPlanIndex].gradient,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: plans[selectedPlanIndex].color.withOpacity(0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
+                const SizedBox(width: 12),
+                GestureDetector(
                   onTap: () {
-                    // TODO: Implement coupon validation logic
-                    Navigator.pop(context);
-                    _showCouponAppliedSnackBar();
+                    _validateAndApplyCoupon(_manualCouponController.text);
                   },
-                  borderRadius: BorderRadius.circular(12),
-                  child: const Center(
-                    child: Text(
-                      'Apply Coupon',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: plans[selectedPlanIndex].color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Apply',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            
-            // Cancel button
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Close button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            child: SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.grey[100],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+          
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
 
-  void _showCouponAppliedSnackBar() {
+
+
+  void _removeCoupon() {
+    setState(() {
+      _appliedCoupon = null;
+    });
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Coupon applied successfully!',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.white,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
+      const SnackBar(
+        content: Text('Coupon removed successfully'),
+        backgroundColor: Colors.orange,
       ),
     );
+  }
+
+  // Calculate discounted price
+  int _getDiscountedPrice() {
+    final originalPrice = plans[selectedPlanIndex].monthlyPrice * 12;
+    if (_appliedCoupon != null) {
+      final discount = _appliedCoupon!.discountAsDouble;
+      final discountedPrice = originalPrice - (originalPrice * discount / 100);
+      return discountedPrice.round();
+    }
+    return originalPrice;
+  }
+
+  void _showCouponAppliedSnackBar() {
+    if (_appliedCoupon != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Coupon ${_appliedCoupon!.couponCode} applied! ${_appliedCoupon!.discount}% discount',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.white,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Widget _buildFeaturesList() {
@@ -1376,13 +1578,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            '₹${plans[selectedPlanIndex].monthlyPrice * 12} /year',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF1F2937),
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '₹${_getDiscountedPrice()} /year',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                              if (_appliedCoupon != null) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  '₹${plans[selectedPlanIndex].monthlyPrice * 12}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[500],
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
                             'Billed annually',
@@ -1391,6 +1610,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
                               color: Colors.grey[600],
                             ),
                           ),
+                          if (_appliedCoupon != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '${_appliedCoupon!.discount}% off with ${_appliedCoupon!.couponCode}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: const Color(0xFF10B981),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

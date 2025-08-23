@@ -11,6 +11,7 @@ import '../models/item.dart'; // Added for Item
 import '../models/detailed_invoice.dart'; // Added for DetailedInvoice
 import '../models/subscription.dart'; // Added for Subscription
 import '../services/fcm_service.dart';
+import '../models/coupon.dart'; // Added for Coupon
 
 class ApiService {
   // Helper method to get current user ID
@@ -2176,6 +2177,121 @@ class ApiService {
         'success': false,
         ApiConstants.messageKey: 'Network error: ${e.toString()}',
         'data': null,
+      };
+    }
+  }
+
+    // Validate Coupon API
+  static Future<Map<String, dynamic>> validateCoupon(String couponCode) async {
+    try {
+      print('🔍 [DEBUG] Validate Coupon Request:');
+      final url = '${ApiConstants.baseURL}${ApiConstants.validateCoupon}';
+      print('   URL: $url');
+      print('   Coupon Code: $couponCode');
+
+      final response = await http.post(
+        Uri.parse(url),
+        body: {
+          'coupon_code': couponCode,
+        },
+      );
+
+      print('📡 [DEBUG] Validate Coupon Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['status'] == true && data['coupon'] != null) {
+          // Import the Coupon model at the top of the file
+          // import '../models/coupon.dart';
+          final coupon = Coupon.fromJson(data['coupon']);
+          
+          return {
+            'success': true,
+            ApiConstants.messageKey: 'Coupon validated successfully',
+            'coupon': coupon,
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Invalid coupon code',
+            'coupon': null,
+          };
+        }
+      } else {
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        String errorMessage = 'Failed to validate coupon';
+        
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          'coupon': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred while validating coupon: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        'coupon': null,
+      };
+    }
+  }
+
+  // Get Available Coupons API
+  static Future<Map<String, dynamic>> getAvailableCoupons() async {
+    try {
+      print('🔍 [DEBUG] Get Available Coupons Request:');
+      final url = '${ApiConstants.baseURL}${ApiConstants.availableCoupons}';
+      print('   URL: $url');
+      
+      final response = await http.get(Uri.parse(url));
+
+      print('📡 [DEBUG] Get Available Coupons Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'success': true,
+          'coupons': data['coupons'] ?? [],
+        };
+      } else if (response.statusCode == 404) {
+        // Endpoint not found - return empty coupons list
+        print('⚠️ [WARNING] Available coupons endpoint not found (404) - returning empty list');
+        return {
+          'success': true,
+          'coupons': [],
+          'message': 'No coupons available at the moment',
+        };
+      } else {
+        final errorData = json.decode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to fetch coupons',
+        };
+      }
+    } catch (e) {
+      print('❌ [ERROR] Get Available Coupons: $e');
+      // Return empty coupons list on error instead of failing
+      return {
+        'success': true,
+        'coupons': [],
+        'message': 'Unable to load coupons - please try again later',
       };
     }
   }
