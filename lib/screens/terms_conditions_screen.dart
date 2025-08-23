@@ -575,16 +575,18 @@ class _TermsBottomSheetState extends State<_TermsBottomSheet> {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Handle bar
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               // Scrollable content
@@ -592,18 +594,21 @@ class _TermsBottomSheetState extends State<_TermsBottomSheet> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Customize Terms & Conditions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                      fontFamily: GoogleFonts.openSans().fontFamily,
+                  Expanded(
+                    child: Text(
+                      'Customize Terms & Conditions',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        fontFamily: GoogleFonts.openSans().fontFamily,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   IconButton(
@@ -622,40 +627,44 @@ class _TermsBottomSheetState extends State<_TermsBottomSheet> {
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: TermsService.termsPresets.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final preset = entry.value;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        editableTerms = List.from(preset);
-                        _initializeControllers();
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: themeService.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: themeService.primaryColor),
-                      ),
-                      child: Text(
-                        'Preset ${index + 1}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: themeService.primaryColor,
-                          fontWeight: FontWeight.w500,
+              Center(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: TermsService.termsPresets.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final preset = entry.value;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          editableTerms = List.from(preset);
+                          _initializeControllers();
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: themeService.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: themeService.primaryColor),
+                        ),
+                        child: Text(
+                          'Preset ${index + 1}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: themeService.primaryColor,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
               
               const SizedBox(height: 20),
@@ -668,6 +677,7 @@ class _TermsBottomSheetState extends State<_TermsBottomSheet> {
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               
@@ -708,16 +718,18 @@ class _TermsBottomSheetState extends State<_TermsBottomSheet> {
               }).toList(),
               
               // Add New Term Button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _addNewTerm,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add New Term'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: themeService.primaryColor,
-                    side: BorderSide(color: themeService.primaryColor),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _addNewTerm,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add New Term'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: themeService.primaryColor,
+                      side: BorderSide(color: themeService.primaryColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
               ),
@@ -725,23 +737,25 @@ class _TermsBottomSheetState extends State<_TermsBottomSheet> {
               const SizedBox(height: 20),
               
               // Apply Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _applyChanges,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeService.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _applyChanges,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeService.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Apply Changes',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    child: const Text(
+                      'Apply Changes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

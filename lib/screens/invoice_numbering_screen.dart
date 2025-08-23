@@ -16,19 +16,40 @@ class InvoiceNumberingScreen extends StatefulWidget {
 class _InvoiceNumberingScreenState extends State<InvoiceNumberingScreen> {
   String currentPrefix = '';
   String currentSeparator = '';
-  bool _isLoading = false;
+  bool _isInitialLoading = true;
+  bool _isSaving = false;
+  bool _isResetting = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with invoice numbering service data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final invoiceNumberingService = Provider.of<InvoiceNumberingService>(context, listen: false);
-      setState(() {
-        currentPrefix = invoiceNumberingService.prefix;
-        currentSeparator = invoiceNumberingService.separator;
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() => _isInitialLoading = true);
+    
+    try {
+      // Initialize with invoice numbering service data
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final invoiceNumberingService = Provider.of<InvoiceNumberingService>(context, listen: false);
+        setState(() {
+          currentPrefix = invoiceNumberingService.prefix;
+          currentSeparator = invoiceNumberingService.separator;
+          _isInitialLoading = false;
+        });
       });
-    });
+    } catch (e) {
+      setState(() => _isInitialLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading settings: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -82,177 +103,234 @@ class _InvoiceNumberingScreenState extends State<InvoiceNumberingScreen> {
               child: Container(height: 1, color: Colors.grey[200]),
             ),
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                                 // Current Format Section
-                 Container(
-                   width: double.infinity,
-                   padding: const EdgeInsets.all(16),
-                   decoration: BoxDecoration(
-                     color: Colors.grey[50],
-                     borderRadius: BorderRadius.circular(12),
-                     border: Border.all(color: Colors.grey[200]!, width: 1),
-                   ),
-                   child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                       Text(
-                         'Current Invoice Number Format',
-                         style: TextStyle(
-                           fontSize: 14,
-                           fontWeight: FontWeight.w600,
-                           color: Colors.black87,
-                           fontFamily: GoogleFonts.openSans().fontFamily,
-                         ),
-                       ),
-                       const SizedBox(height: 12),
-                                               Row(
-                          children: [
-                            Expanded(
-                              child: _buildFormatInfo('Prefix', currentPrefix, themeService.primaryColor),
-                            ),
-                            Expanded(
-                              child: _buildFormatInfo('Separator', currentSeparator, themeService.secondaryColor),
-                            ),
-                          ],
+          body: _isInitialLoading
+              ? _buildLoadingBody(themeService)
+              : RefreshIndicator(
+                  onRefresh: _loadInitialData,
+                  color: themeService.primaryColor,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Current Format Section
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!, width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Current Invoice Number Format',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                  fontFamily: GoogleFonts.openSans().fontFamily,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildFormatInfo('Prefix', currentPrefix, themeService.primaryColor),
+                                  ),
+                                  Expanded(
+                                    child: _buildFormatInfo('Separator', currentSeparator, themeService.secondaryColor),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              // Show example invoice number
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: themeService.primaryColor.withOpacity(0.3), width: 1),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Example Invoice Number:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[600],
+                                        fontFamily: GoogleFonts.openSans().fontFamily,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${currentPrefix}${currentSeparator}${invoiceNumberingService.currentNumber}',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: themeService.primaryColor,
+                                        fontFamily: GoogleFonts.openSans().fontFamily,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                       const SizedBox(height: 16),
-                                   // Show example invoice number
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: themeService.primaryColor.withOpacity(0.3), width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Example Invoice Number:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                      fontFamily: GoogleFonts.openSans().fontFamily,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                                     Text(
-                     '${currentPrefix}${currentSeparator}${invoiceNumberingService.currentNumber}',
-                     style: TextStyle(
-                       fontSize: 16,
-                       fontWeight: FontWeight.bold,
-                       color: themeService.primaryColor,
-                       fontFamily: GoogleFonts.openSans().fontFamily,
-                     ),
-                   ),
-                ],
-              ),
-            ),
-                     ],
-                   ),
-                 ),
-                const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                // Invoice Template Preview Section
-                Text(
-                  'Invoice Template Preview',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                    fontFamily: GoogleFonts.openSans().fontFamily,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'See how your invoice numbering will appear in the actual invoice',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontFamily: GoogleFonts.openSans().fontFamily,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!, width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: _buildInvoiceTemplatePreview(invoiceNumberingService, themeService),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                        // Invoice Template Preview Section
+                        Text(
+                          'Invoice Template Preview',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            fontFamily: GoogleFonts.openSans().fontFamily,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'See how your invoice numbering will appear in the actual invoice',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            fontFamily: GoogleFonts.openSans().fontFamily,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: _buildInvoiceTemplatePreview(invoiceNumberingService, themeService),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
 
-                // Edit Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                                         onPressed: () => _showEditBottomSheet(context, invoiceNumberingService, themeService),
-                    icon: const Icon(Icons.edit, size: 20),
-                    label: const Text(
-                      'Edit Invoice Numbering',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeService.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                        // Edit Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isSaving || _isResetting 
+                                ? null 
+                                : () => _showEditBottomSheet(context, invoiceNumberingService, themeService),
+                            icon: _isSaving 
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Icon(Icons.edit, size: 20),
+                            label: Text(
+                              _isSaving ? 'Saving...' : 'Edit Invoice Numbering',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: themeService.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
-                // Reset Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showResetDialog(context, invoiceNumberingService),
-                    icon: const Icon(Icons.restore, size: 20),
-                    label: const Text(
-                      'Reset to Defaults',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red[600],
-                      side: BorderSide(color: Colors.red[600]!, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                        // Reset Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _isSaving || _isResetting 
+                                ? null 
+                                : () => _showResetDialog(context, invoiceNumberingService),
+                            icon: _isResetting 
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                                    ),
+                                  )
+                                : const Icon(Icons.restore, size: 20),
+                            label: Text(
+                              _isResetting ? 'Resetting...' : 'Reset to Defaults',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red[600],
+                              side: BorderSide(color: Colors.red[600]!, width: 1.5),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
         );
       },
     );
   }
 
-
-
-  
+  Widget _buildLoadingBody(ThemeService themeService) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(themeService.primaryColor),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Loading invoice numbering settings...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontFamily: GoogleFonts.openSans().fontFamily,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Please wait while we fetch your current configuration',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+              fontFamily: GoogleFonts.openSans().fontFamily,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildInvoiceTemplatePreview(InvoiceNumberingService invoiceNumberingService, ThemeService themeService) {
     // Sample data for the invoice template preview
@@ -395,7 +473,6 @@ class _InvoiceNumberingScreenState extends State<InvoiceNumberingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // Prefix Field
                   Text(
                     'Invoice Prefix',
@@ -457,56 +534,58 @@ class _InvoiceNumberingScreenState extends State<InvoiceNumberingScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                                             onPressed: () async {
-                         setState(() => _isLoading = true);
-                         
-                                                   try {
-                            await invoiceNumberingService.updatePrefix(prefixController.text);
-                            await invoiceNumberingService.updateSeparator(separatorController.text);
-                            
-                            // Update local state immediately after saving
-                            setState(() {
-                              currentPrefix = prefixController.text;
-                              currentSeparator = separatorController.text;
-                            });
-                           
-                           if (mounted) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(
-                                 content: Text('Invoice numbering settings saved successfully!'),
-                                 backgroundColor: Colors.green,
-                               ),
-                             );
-                             
-                             // Navigate back after a short delay to show the SnackBar
-                             Future.delayed(const Duration(milliseconds: 1500), () {
-                               if (mounted) {
-                                 Navigator.of(context).pop();
-                               }
-                             });
-                           }
-                         } catch (e) {
-                           if (mounted) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               SnackBar(
-                                 content: Text('Error saving settings: $e'),
-                                 backgroundColor: Colors.red,
-                               ),
-                             );
-                           }
-                         } finally {
-                           setState(() => _isLoading = false);
-                         }
-                       },
-                                             style: ElevatedButton.styleFrom(
-                         backgroundColor: themeService.primaryColor,
-                         foregroundColor: Colors.white,
-                         padding: const EdgeInsets.symmetric(vertical: 16),
-                         shape: RoundedRectangleBorder(
-                           borderRadius: BorderRadius.circular(12),
-                         ),
-                       ),
-                      child: _isLoading
+                      onPressed: _isSaving 
+                          ? null 
+                          : () async {
+                              setState(() => _isSaving = true);
+                              
+                              try {
+                                await invoiceNumberingService.updatePrefix(prefixController.text);
+                                await invoiceNumberingService.updateSeparator(separatorController.text);
+                                
+                                // Update local state immediately after saving
+                                setState(() {
+                                  currentPrefix = prefixController.text;
+                                  currentSeparator = separatorController.text;
+                                });
+                               
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Invoice numbering settings saved successfully!'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  
+                                  // Navigate back after a short delay to show the SnackBar
+                                  Future.delayed(const Duration(milliseconds: 1500), () {
+                                    if (mounted) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  });
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error saving settings: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                setState(() => _isSaving = false);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeService.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isSaving
                           ? const SizedBox(
                               height: 20,
                               width: 20,
@@ -545,26 +624,52 @@ class _InvoiceNumberingScreenState extends State<InvoiceNumberingScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-                         onPressed: () async {
-               Navigator.of(context).pop();
-               await invoiceNumberingService.resetToDefaults();
-               
-                               // Update local state after reset
-                setState(() {
-                  currentPrefix = invoiceNumberingService.prefix;
-                  currentSeparator = invoiceNumberingService.separator;
-                });
-               
-               if (mounted) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(
-                     content: Text('Settings reset to defaults successfully!'),
-                     backgroundColor: Colors.orange,
-                   ),
-                 );
-               }
-             },
-            child: const Text('Reset', style: TextStyle(color: Colors.red)),
+            onPressed: _isResetting 
+                ? null 
+                : () async {
+                    Navigator.of(context).pop();
+                    setState(() => _isResetting = true);
+                    
+                    try {
+                      await invoiceNumberingService.resetToDefaults();
+                      
+                      // Update local state after reset
+                      setState(() {
+                        currentPrefix = invoiceNumberingService.prefix;
+                        currentSeparator = invoiceNumberingService.separator;
+                      });
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Settings reset to defaults successfully!'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error resetting settings: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } finally {
+                      setState(() => _isResetting = false);
+                    }
+                  },
+            child: _isResetting 
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                    ),
+                  )
+                : const Text('Reset', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

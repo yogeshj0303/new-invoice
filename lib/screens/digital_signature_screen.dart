@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:signature/signature.dart';
@@ -31,8 +32,12 @@ class _DigitalSignatureScreenState extends State<DigitalSignatureScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Digital Signature'),
-        backgroundColor: DigitalSignatureConstants.primaryColor,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back,color: ThemeService.defaultPrimaryColor,),
+        ),
+        backgroundColor: Colors.white,
+        title: Text('Digital Signature',style: TextStyle(fontFamily: GoogleFonts.openSans().fontFamily,),),
         foregroundColor: Colors.white,
         actions: [
           Consumer<DigitalSignatureService>(
