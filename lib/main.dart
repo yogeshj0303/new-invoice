@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'services/theme_service.dart';
+import 'services/contact_service.dart';
+import 'services/terms_service.dart';
+import 'services/invoice_numbering_service.dart';
+import 'services/discount_settings_service.dart';
+import 'services/digital_signature_service.dart';
 import 'package:invoice_app/screens/about_screen.dart';
 import 'package:invoice_app/screens/business_profile_screen.dart';
 import 'package:invoice_app/screens/create_invoice.dart';
@@ -25,7 +33,42 @@ import 'package:invoice_app/screens/add_item_screen.dart';
 import 'package:invoice_app/screens/create_item_screen.dart';
 import 'package:invoice_app/screens/business_gst_settings_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp();
+    print('✅ [Firebase] Initialized successfully');
+  } catch (e) {
+    print('❌ [Firebase] Failed to initialize: $e');
+  }
+  
+  // Initialize services
+  try {
+    final invoiceNumberingService = InvoiceNumberingService();
+    await invoiceNumberingService.initialize();
+    print('✅ [InvoiceNumberingService] Initialized successfully');
+  } catch (e) {
+    print('❌ [InvoiceNumberingService] Failed to initialize: $e');
+  }
+  
+  try {
+    final discountSettingsService = DiscountSettingsService();
+    await discountSettingsService.initialize();
+    print('✅ [DiscountSettingsService] Initialized successfully');
+  } catch (e) {
+    print('❌ [DiscountSettingsService] Failed to initialize: $e');
+  }
+  
+  try {
+    final digitalSignatureService = DigitalSignatureService();
+    await digitalSignatureService.initialize();
+    print('✅ [DigitalSignatureService] Initialized successfully');
+  } catch (e) {
+    print('❌ [DigitalSignatureService] Failed to initialize: $e');
+  }
+  
   runApp(RestaurantInvoiceApp());
 }
 
@@ -50,7 +93,16 @@ class _RestaurantInvoiceAppState extends State<RestaurantInvoiceApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeService()),
+        ChangeNotifierProvider(create: (context) => ContactService()),
+        ChangeNotifierProvider(create: (context) => TermsService()),
+        ChangeNotifierProvider(create: (context) => InvoiceNumberingService()),
+        ChangeNotifierProvider(create: (context) => DiscountSettingsService()),
+        ChangeNotifierProvider(create: (context) => DigitalSignatureService()),
+      ],
+      child: MaterialApp(
       title: 'Restaurant Invoice App',
       theme: ThemeData(
         brightness: Brightness.light,
@@ -240,6 +292,7 @@ class _RestaurantInvoiceAppState extends State<RestaurantInvoiceApp> {
         '/create-item': (context) => const CreateItemScreen(),
       },
       debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }

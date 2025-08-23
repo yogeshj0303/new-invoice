@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/contact_service.dart';
+import '../services/terms_service.dart';
+import '../services/invoice_numbering_service.dart';
+import '../services/discount_settings_service.dart';
+import '../services/digital_signature_service.dart';
 
 class InvoiceTemplate extends StatelessWidget {
   final List<Map<String, dynamic>> items;
@@ -40,7 +46,9 @@ class InvoiceTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Consumer4<ContactService, TermsService, InvoiceNumberingService, DigitalSignatureService>(
+      builder: (context, contactService, termsService, invoiceNumberingService, digitalSignatureService, child) {
+        return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(3),
@@ -98,7 +106,7 @@ class InvoiceTemplate extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'ACT T CONNECT',
+                                contactService.companyName,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -107,7 +115,7 @@ class InvoiceTemplate extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Professional Business Solutions',
+                                contactService.companyDescription,
                                 style: TextStyle(
                                   fontSize: 7,
                                   color: Colors.grey[700],
@@ -119,28 +127,31 @@ class InvoiceTemplate extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        'Block no 9, South Avenue, Shahpura',
-                        style: TextStyle(
-                          fontSize: 7,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
+                      if (contactService.address1.isNotEmpty)
+                        Text(
+                          contactService.address1,
+                          style: TextStyle(
+                            fontSize: 7,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Bhopal, Madhya Pradesh 462039, India',
-                        style: TextStyle(
-                          fontSize: 7,
-                          color: Colors.grey[700],
+                      if (contactService.address2.isNotEmpty)
+                        Text(
+                          contactService.address2,
+                          style: TextStyle(
+                            fontSize: 7,
+                            color: Colors.grey[700],
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Mobile: +91 9826000000',
-                        style: TextStyle(
-                          fontSize: 7,
-                          color: Colors.grey[700],
+                      if (contactService.phone.isNotEmpty)
+                        Text(
+                          'Mobile: ${contactService.phone}',
+                          style: TextStyle(
+                            fontSize: 7,
+                            color: Colors.grey[700],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -168,14 +179,16 @@ class InvoiceTemplate extends StatelessWidget {
                               color: Colors.grey[600],
                             ),
                           ),
-                          Text(
-                            invoiceNumber,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
+                                                                                 Text(
+                              invoiceNumber.isNotEmpty 
+                                  ? '${invoiceNumberingService.prefix}${invoiceNumberingService.separator}${invoiceNumber}'
+                                  : '${invoiceNumberingService.prefix}${invoiceNumberingService.separator}${invoiceNumberingService.currentNumber}',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 1),
                           Text(
                             'Invoice Date',
@@ -1048,14 +1061,21 @@ class InvoiceTemplate extends StatelessWidget {
                             horizontal: 3,
                             vertical: 3,
                           ),
-                          child: Text(
-                            'Rs. ${_formatPrice(_calculateTotalTax())}',
-                            style: TextStyle(
-                              fontSize: 7,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                            textAlign: TextAlign.center,
+                          child: Consumer<DiscountSettingsService>(
+                            builder: (context, discountService, child) {
+                              final calculatedTax = discountService.isDiscountBeforeTax 
+                                ? _calculateTotalTaxOnAmount(_calculateSubtotal() - discount)
+                                : _calculateTotalTax();
+                              return Text(
+                                'Rs. ${_formatPrice(calculatedTax)}',
+                                style: TextStyle(
+                                  fontSize: 7,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                ),
+                                textAlign: TextAlign.center,
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -1202,13 +1222,26 @@ class InvoiceTemplate extends StatelessWidget {
                           color: primaryColor,
                         ),
                       ),
-                      Text(
-                        'Rs. ${_formatPrice(_calculateSubtotal() - discount + _calculateTotalTax() + additionalChargesTotal + roundoff)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
+                      Consumer<DiscountSettingsService>(
+                        builder: (context, discountService, child) {
+                          final calculatedTax = discountService.isDiscountBeforeTax 
+                            ? _calculateTotalTaxOnAmount(_calculateSubtotal() - discount)
+                            : _calculateTotalTax();
+                          return Text(
+                            'Rs. ${_formatPrice(discountService.calculateTotal(
+                              subtotal: _calculateSubtotal(),
+                              discount: discount,
+                              tax: calculatedTax,
+                              additionalCharges: additionalChargesTotal,
+                              roundoff: roundoff,
+                            ))}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1248,13 +1281,26 @@ class InvoiceTemplate extends StatelessWidget {
                           color: Colors.grey[700],
                         ),
                       ),
-                      Text(
-                        'Rs. ${_formatPrice(amountReceived - (_calculateSubtotal() - discount + _calculateTotalTax() + additionalChargesTotal + roundoff))}',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[600],
-                        ),
+                      Consumer<DiscountSettingsService>(
+                        builder: (context, discountService, child) {
+                          final calculatedTax = discountService.isDiscountBeforeTax 
+                            ? _calculateTotalTaxOnAmount(_calculateSubtotal() - discount)
+                            : _calculateTotalTax();
+                          return Text(
+                            'Rs. ${_formatPrice(amountReceived - discountService.calculateTotal(
+                              subtotal: _calculateSubtotal(),
+                              discount: discount,
+                              tax: calculatedTax,
+                              additionalCharges: additionalChargesTotal,
+                              roundoff: roundoff,
+                            ))}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[600],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1288,20 +1334,29 @@ class InvoiceTemplate extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 1),
-                Text(
-                  _amountInWords(
-                    _calculateSubtotal() -
-                        discount +
-                        _calculateTotalTax() +
-                        additionalChargesTotal +
-                        roundoff,
-                  ),
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: primaryColor,
-                    fontStyle: FontStyle.italic,
-                  ),
+                Consumer<DiscountSettingsService>(
+                  builder: (context, discountService, child) {
+                    final calculatedTax = discountService.isDiscountBeforeTax 
+                      ? _calculateTotalTaxOnAmount(_calculateSubtotal() - discount)
+                      : _calculateTotalTax();
+                    return Text(
+                      _amountInWords(
+                        discountService.calculateTotal(
+                          subtotal: _calculateSubtotal(),
+                          discount: discount,
+                          tax: calculatedTax,
+                          additionalCharges: additionalChargesTotal,
+                          roundoff: roundoff,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1324,7 +1379,7 @@ class InvoiceTemplate extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Terms:',
+                  'Terms & Conditions:',
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
@@ -1332,23 +1387,96 @@ class InvoiceTemplate extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '1. Goods once sold will not be taken back or exchanged',
-                  style: TextStyle(
-                    fontSize: 6,
-                    color: Colors.grey[700],
+                if (termsService.terms.isNotEmpty)
+                  ...termsService.terms.map((term) => Text(
+                    term,
+                    style: TextStyle(
+                      fontSize: 6,
+                      color: Colors.grey[700],
+                    ),
+                  )).toList()
+                else
+                  Text(
+                    '1. Goods once sold will not be taken back or exchanged',
+                    style: TextStyle(
+                      fontSize: 6,
+                      color: Colors.grey[700],
+                    ),
                   ),
-                ),
-                Text(
-                  '2. All disputes are subject to local jurisdiction only',
-                  style: TextStyle(
-                    fontSize: 6,
-                    color: Colors.grey[700],
-                  ),
-                ),
               ],
             ),
           ),
+
+          // Ultra-Compact Digital Signature
+          if (digitalSignatureService.hasSignature)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey[300]!,
+                    width: 0.3,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Digital Signature:',
+                          style: TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          height: 30,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.memory(
+                              digitalSignatureService.signature!,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Authorized Signatory',
+                          style: TextStyle(
+                            fontSize: 6,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 80,
+                          height: 1,
+                          color: Colors.grey[400],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           // Ultra-Compact Footer
           Container(
@@ -1376,14 +1504,14 @@ class InvoiceTemplate extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 1),
-                      Text(
-                        'ACT T CONNECT',
-                        style: TextStyle(
-                          fontSize: 7,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
+                                              Text(
+                          contactService.companyName,
+                          style: TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -1407,6 +1535,8 @@ class InvoiceTemplate extends StatelessWidget {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -1457,6 +1587,18 @@ class InvoiceTemplate extends StatelessWidget {
     return totalTax;
   }
 
+  double _calculateTotalTaxOnAmount(double amount) {
+    double totalTax = 0;
+    for (var item in items) {
+      final itemTotal = item['qty'] * item['price'];
+      final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+      // Calculate tax proportionally based on the amount
+      final itemTax = (itemTotal / _calculateSubtotal()) * amount * gstValue / 100;
+      totalTax += itemTax;
+    }
+    return totalTax;
+  }
+
   double _getTaxRate() {
     if (items.isEmpty) return 0;
     final gstValue = items.first['gst'] != null ? double.tryParse(items.first['gst'].toString()) ?? 0.0 : 0.0;
@@ -1477,10 +1619,14 @@ class InvoiceTemplate extends StatelessWidget {
   }
 
   double _calculateCGST() {
+    // This method is used in contexts where we don't have access to DiscountSettingsService
+    // The actual tax calculation should be done in the Consumer widgets
     return _calculateTotalTax() / 2;
   }
 
   double _calculateSGST() {
+    // This method is used in contexts where we don't have access to DiscountSettingsService
+    // The actual tax calculation should be done in the Consumer widgets
     return _calculateTotalTax() / 2;
   }
 

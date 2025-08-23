@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../models/transaction.dart';
 import '../models/business_profile.dart';
 import '../constants/api_constants.dart';
+import 'transaction_detail_screen.dart';
 
 // Placeholder for other screens
 class HomeDashboard extends StatefulWidget {
@@ -632,6 +633,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             _TransactionItem(
               transaction: transaction,
               isTablet: isTablet,
+              businessProfile: _businessProfile,
             ),
             SizedBox(height: 8),
           ],
@@ -1605,10 +1607,12 @@ class _InvoiceTransactionItem extends StatelessWidget {
 class _TransactionItem extends StatelessWidget {
   final Transaction transaction;
   final bool isTablet;
+  final BusinessProfile? businessProfile;
 
   const _TransactionItem({
     required this.transaction,
     required this.isTablet,
+    this.businessProfile,
   });
 
   Color _getStatusColor(String status) {
@@ -1654,24 +1658,50 @@ class _TransactionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
-      ),
-      child: Column(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TransactionDetailScreen(
+              transaction: transaction,
+              businessProfile: businessProfile,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Customer name
-          Text(
-            transaction.customerName,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color: Colors.black87,
-            ),
+          // Customer name and click indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  transaction.customerName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
           ),
           SizedBox(height: 4),
           // Invoice details and amount/status row
@@ -1796,6 +1826,7 @@ class _TransactionItem extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

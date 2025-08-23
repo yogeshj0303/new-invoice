@@ -777,23 +777,23 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> with Tick
                               SizedBox(height: 16),
                               
                               // Skip for now option
-                              Center(
-                                child: TextButton.icon(
-                                  onPressed: _isLoading ? null : () {
-                                    if (mounted) {
-                                      Navigator.pushReplacementNamed(context, '/main');
-                                    }
-                                  },
-                                  icon: Icon(Icons.skip_next, size: 16),
-                                  label: Text(
-                                    'Skip for now',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              // Center(
+                              //   child: TextButton.icon(
+                              //     onPressed: _isLoading ? null : () {
+                              //       if (mounted) {
+                              //         Navigator.pushReplacementNamed(context, '/main');
+                              //       }
+                              //     },
+                              //     icon: Icon(Icons.skip_next, size: 16),
+                              //     label: Text(
+                              //       'Skip for now',
+                              //       style: theme.textTheme.bodyMedium?.copyWith(
+                              //         color: primaryColor,
+                              //         fontWeight: FontWeight.w600,
+                              //       ),
+                              //     ),
+                              //   ),
+                              // ),
                             ],
                           ),
                         ),

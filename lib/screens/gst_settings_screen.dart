@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../services/theme_service.dart';
 
 class GSTSettingsScreen extends StatefulWidget {
   const GSTSettingsScreen({super.key});
@@ -13,38 +15,11 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
   Color selectedSecondaryColor = const Color(0xFF4E4AA8);
   Color selectedAccentColor = const Color(0xFF4CAF50);
 
-  final List<Color> primaryColors = [
-    const Color(0xFF2E3085), // Blue
-    const Color(0xFFD32F2F), // Red
-    const Color(0xFF388E3C), // Green
-    const Color(0xFFF57C00), // Orange
-    const Color(0xFF7B1FA2), // Purple
-    const Color(0xFF1976D2), // Light Blue
-    const Color(0xFFE91E63), // Pink
-    const Color(0xFF795548), // Brown
-  ];
+  final List<Color> primaryColors = ThemeService.primaryColors;
 
-  final List<Color> secondaryColors = [
-    const Color(0xFF4E4AA8), // Blue
-    const Color(0xFFEF5350), // Red
-    const Color(0xFF66BB6A), // Green
-    const Color(0xFFFF9800), // Orange
-    const Color(0xFF9C27B0), // Purple
-    const Color(0xFF42A5F5), // Light Blue
-    const Color(0xFFEC407A), // Pink
-    const Color(0xFF8D6E63), // Brown
-  ];
+  final List<Color> secondaryColors = ThemeService.secondaryColors;
 
-  final List<Color> accentColors = [
-    const Color(0xFF4CAF50), // Green
-    const Color(0xFFFF5722), // Deep Orange
-    const Color(0xFF2196F3), // Blue
-    const Color(0xFFFFC107), // Amber
-    const Color(0xFF9C27B0), // Purple
-    const Color(0xFF00BCD4), // Cyan
-    const Color(0xFFFF9800), // Orange
-    const Color(0xFF607D8B), // Blue Grey
-  ];
+  final List<Color> accentColors = ThemeService.accentColors;
 
   // Sample data for template preview
   final List<Map<String, dynamic>> sampleItems = [
@@ -53,8 +28,27 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Colors will be initialized from theme service in build method
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Consumer<ThemeService>(
+      builder: (context, themeService, child) {
+        // Initialize colors from theme service
+        if (selectedPrimaryColor != themeService.primaryColor) {
+          selectedPrimaryColor = themeService.primaryColor;
+        }
+        if (selectedSecondaryColor != themeService.secondaryColor) {
+          selectedSecondaryColor = themeService.secondaryColor;
+        }
+        if (selectedAccentColor != themeService.accentColor) {
+          selectedAccentColor = themeService.accentColor;
+        }
+        
+        return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -1146,6 +1140,8 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                            setState(() {
                              selectedPrimaryColor = color;
                            });
+                           // Update theme service
+                           themeService.updatePrimaryColor(color);
                          },
                        ),
                        
@@ -1155,14 +1151,29 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Save color settings
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Color settings saved successfully!'),
-                                backgroundColor: Colors.green,
-                              ),
+                          onPressed: () async {
+                            // Save all color settings
+                            await themeService.updateColors(
+                              primaryColor: selectedPrimaryColor,
+                              secondaryColor: selectedSecondaryColor,
+                              accentColor: selectedAccentColor,
                             );
+                            
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Color settings saved successfully!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              
+                              // Navigate back after a short delay to show the SnackBar
+                              Future.delayed(const Duration(milliseconds: 1500), () {
+                                if (mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              });
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: selectedPrimaryColor,
@@ -1191,6 +1202,8 @@ class _GSTSettingsScreenState extends State<GSTSettingsScreen> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 

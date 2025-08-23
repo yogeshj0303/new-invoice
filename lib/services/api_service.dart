@@ -8,6 +8,8 @@ import '../models/transaction.dart';
 import '../utils/auth_utils.dart';
 import 'dart:io'; // Added for File and Platform
 import '../models/item.dart'; // Added for Item
+import '../models/detailed_invoice.dart'; // Added for DetailedInvoice
+import '../services/fcm_service.dart';
 
 class ApiService {
   // Helper method to get current user ID
@@ -33,6 +35,9 @@ class ApiService {
   // Send OTP API
   static Future<Map<String, dynamic>> sendOTP(String phoneNumber) async {
     try {
+      // Get FCM token with fallback
+      String fcmToken = await FCMService.getTokenWithFallback();
+      
       // Debug: Print request details
       final url = '${ApiConstants.baseURL}${ApiConstants.sendOTP}';
       
@@ -46,11 +51,15 @@ class ApiService {
         'phone': cleanPhone,
       };
       
+      // Add FCM token to request body
+      requestBody['fcm_token'] = fcmToken;
+      
       print('🔍 [DEBUG] Send OTP Request:');
       print('   URL: $url');
       print('   Headers: ${ApiConstants.defaultHeaders}');
       print('   Body: $requestBody');
       print('   JSON Body: ${jsonEncode(requestBody)}');
+      print('   FCM Token: $fcmToken');
       
       // Try different request formats if the first one fails
       print('📡 [DEBUG] Making HTTP POST request...');
@@ -113,13 +122,17 @@ class ApiService {
   // Verify OTP API
   static Future<Map<String, dynamic>> verifyOTP(String phoneNumber, String otp) async {
     try {
-      // Debug: Print request details
-      final url = '${ApiConstants.baseURL}${ApiConstants.verifyOTP}?phone=$phoneNumber&otp=$otp';
+      // Get FCM token with fallback
+      String fcmToken = await FCMService.getTokenWithFallback();
+      
+      // Build URL with FCM token
+      String url = '${ApiConstants.baseURL}${ApiConstants.verifyOTP}?phone=$phoneNumber&otp=$otp&fcm_token=$fcmToken';
       
       print('🔍 [DEBUG] Verify OTP Request:');
       print('   URL: $url');
       print('   Headers: ${ApiConstants.defaultHeaders}');
       print('   Phone: $phoneNumber, OTP: $otp');
+      print('   FCM Token: $fcmToken');
       
       final response = await http.post(
         Uri.parse(url),
@@ -1801,6 +1814,215 @@ class ApiService {
         ApiConstants.messageKey: 'Network error: ${e.toString()}',
         ApiConstants.errorKey: 'Exception',
         'transactions': [],
+      };
+    }
+  }
+
+  // Get Detailed Invoice API
+  static Future<Map<String, dynamic>> getDetailedInvoice(int invoiceId) async {
+    try {
+      final currentUserId = await getCurrentUserId();
+      if (currentUserId == null) {
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'User not authenticated',
+          'detailedInvoice': null,
+        };
+      }
+      
+      // Use the invoices endpoint with user_id parameter
+      final url = '${ApiConstants.baseURL}/api/invoices?user_id=$currentUserId';
+      
+      print('🔍 [DEBUG] Get Detailed Invoice Request:');
+      print('URL: $url');
+      print('Headers: ${ApiConstants.defaultHeaders}');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Get Detailed Invoice Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        // Handle different possible response structures
+        List<dynamic> invoicesList = [];
+        
+        if (data['data'] is List) {
+          invoicesList = data['data'] as List;
+        } else if (data is List) {
+          invoicesList = data;
+        } else if (data['invoices'] is List) {
+          invoicesList = data['invoices'] as List;
+        }
+        
+        if (invoicesList.isNotEmpty) {
+          // Find the specific invoice by ID
+          final targetInvoice = invoicesList.firstWhere(
+            (invoice) => invoice['id'] == invoiceId,
+            orElse: () => null,
+          );
+          
+          if (targetInvoice != null) {
+            try {
+              final detailedInvoice = DetailedInvoice.fromJson(targetInvoice);
+              print('✅ [DEBUG] Successfully parsed detailed invoice: ${detailedInvoice.id}');
+              
+              return {
+                'success': true,
+                ApiConstants.messageKey: 'Detailed invoice loaded successfully',
+                'detailedInvoice': detailedInvoice,
+              };
+            } catch (parseError) {
+              print('⚠️ [DEBUG] Error parsing detailed invoice: $parseError');
+              print('⚠️ [DEBUG] Invoice data that failed to parse: $targetInvoice');
+              return {
+                'success': false,
+                ApiConstants.messageKey: 'Error parsing invoice data: $parseError',
+                'detailedInvoice': null,
+              };
+            }
+          } else {
+            print('⚠️ [DEBUG] Invoice with ID $invoiceId not found in ${invoicesList.length} invoices');
+            return {
+              'success': false,
+              ApiConstants.messageKey: 'Invoice not found',
+              'detailedInvoice': null,
+            };
+          }
+        } else {
+          print('⚠️ [DEBUG] No invoices found in response. Response structure: ${data.keys.toList()}');
+          return {
+            'success': false,
+            ApiConstants.messageKey: 'No invoices found',
+            'detailedInvoice': null,
+          };
+        }
+      } else {
+        // Handle different status codes
+        final errorData = jsonDecode(response.body);
+        print('❌ [DEBUG] Error Response Data: $errorData');
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        
+        // Try to extract error message from different possible fields
+        String errorMessage = 'Failed to load detailed invoice';
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        } else if (errorData.containsKey('detail')) {
+          errorMessage = errorData['detail'];
+        } else if (errorData.containsKey('msg')) {
+          errorMessage = errorData['msg'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          ApiConstants.errorKey: 'HTTP ${response.statusCode}',
+          'detailedInvoice': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        ApiConstants.errorKey: 'Exception',
+        'detailedInvoice': null,
+      };
+    }
+  }
+  
+  // Alternative method to get invoice data directly from transaction
+  static Future<Map<String, dynamic>> getInvoiceDataFromTransaction(Transaction transaction) async {
+    try {
+      // Since we have the transaction data, we can create a mock detailed invoice
+      // This is a fallback when the API doesn't work
+      print('🔍 [DEBUG] Creating invoice data from transaction: ${transaction.id}');
+      
+      // Create a mock detailed invoice from the transaction data
+      final mockInvoice = {
+        'id': transaction.invoiceId,
+        'user_id': transaction.userId,
+        'customer_id': transaction.invoice.customerId,
+        'customer_name': transaction.customerName,
+        'customer_number': transaction.invoice.customerNumber,
+        'payment_type': transaction.invoice.paymentType,
+        'discount_percent': transaction.invoice.discountPercent,
+        'discount_amount': transaction.invoice.discountAmount,
+        'round_off': transaction.invoice.roundOff,
+        'total_amount': transaction.invoice.totalAmount,
+        'amount_received': transaction.invoice.amountReceived,
+        'note': transaction.invoice.note,
+        'created_at': transaction.createdAt,
+        'updated_at': transaction.updatedAt,
+        'items': [
+          {
+            'id': 1,
+            'invoice_id': transaction.invoiceId,
+            'item_id': 1,
+            'quantity': 1,
+            'price': transaction.invoice.totalAmount,
+            'total': transaction.invoice.totalAmount,
+            'created_at': transaction.createdAt,
+            'updated_at': transaction.updatedAt,
+            'item': {
+              'id': 1,
+              'item_name': 'Invoice Item',
+              'user_id': transaction.userId,
+              'created_at': transaction.createdAt,
+              'updated_at': transaction.updatedAt,
+            }
+          }
+        ],
+        'charges': [],
+        'customer': {
+          'id': transaction.invoice.customerId,
+          'customer_name': transaction.customerName,
+          'company_name': '',
+          'email': '',
+          'phone': transaction.invoice.customerNumber,
+          'gst': '',
+          'gst_treatment': '',
+          'place_of_supply': '',
+          'state': '',
+          'user_id': transaction.userId,
+          'created_at': transaction.createdAt,
+          'updated_at': transaction.updatedAt,
+        }
+      };
+      
+      try {
+        final detailedInvoice = DetailedInvoice.fromJson(mockInvoice);
+        print('✅ [DEBUG] Successfully created mock detailed invoice from transaction');
+        
+        return {
+          'success': true,
+          ApiConstants.messageKey: 'Invoice data created from transaction',
+          'detailedInvoice': detailedInvoice,
+        };
+      } catch (parseError) {
+        print('⚠️ [DEBUG] Error creating mock invoice: $parseError');
+        return {
+          'success': false,
+          ApiConstants.messageKey: 'Error creating invoice data',
+          'detailedInvoice': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception creating mock invoice: $e');
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Error creating invoice data: ${e.toString()}',
+        'detailedInvoice': null,
       };
     }
   }

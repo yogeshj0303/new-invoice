@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/customer.dart';
 import '../models/item.dart';
 import '../services/api_service.dart';
+import '../services/invoice_numbering_service.dart';
+import '../services/discount_settings_service.dart';
 import '../constants/api_constants.dart';
 import '../utils/auth_utils.dart';
 import '../widgets/edit_bottom_sheet_content.dart';
@@ -137,9 +140,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   double get subtotal =>
       items.fold(0, (sum, item) => sum + (item['qty'] * item['price']));
   double get discount => _calculateDiscount();
-  double get tax => _calculateTotalTax();
+  double get tax {
+    final discountService = Provider.of<DiscountSettingsService>(context, listen: false);
+    if (discountService.isDiscountBeforeTax) {
+      // If discount is before tax, calculate tax on (subtotal - discount)
+      return _calculateTotalTaxOnAmount(subtotal - discount);
+    } else {
+      // If discount is after tax, calculate tax on subtotal (current behavior)
+      return _calculateTotalTax();
+    }
+  }
   double get additionalChargesTotal => additionalCharges.fold(0, (sum, charge) => sum + (charge['price'] ?? 0));
-  double get total => subtotal - discount + tax + additionalChargesTotal + _calculateRoundoff();
+  double get total {
+    final discountService = Provider.of<DiscountSettingsService>(context, listen: false);
+    return discountService.calculateTotal(
+      subtotal: subtotal,
+      discount: discount,
+      tax: tax,
+      additionalCharges: additionalChargesTotal,
+      roundoff: _calculateRoundoff(),
+    );
+  }
   
   double _calculateRoundoff() {
     if (roundoffController.text.isEmpty) return 0;
@@ -211,8 +232,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
       final itemTax = itemTotal * gstValue / 100;
       totalTax += itemTax;
-      
+    }
+    return totalTax;
+  }
 
+  double _calculateTotalTaxOnAmount(double amount) {
+    double totalTax = 0;
+    for (var item in items) {
+      final itemTotal = item['qty'] * item['price'];
+      // Use GST value if available, otherwise fallback to taxRate
+      final gstValue = item['gst'] != null ? double.tryParse(item['gst'].toString()) ?? 0.0 : 0.0;
+      // Calculate tax proportionally based on the amount
+      final itemTax = (itemTotal / subtotal) * amount * gstValue / 100;
+      totalTax += itemTax;
     }
     return totalTax;
   }
@@ -540,15 +572,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
-                     Row(
-                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                       children: [
-                                                   Text(
-                            'Invoice #${serialNumberController.text}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
+                                           Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Consumer<InvoiceNumberingService>(
+                            builder: (context, invoiceNumberingService, child) {
+                              return Text(
+                                'Invoice #${invoiceNumberingService.nextInvoiceNumber}',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              );
+                            },
                           ),
                          Material(
                            color: Colors.transparent,
@@ -574,14 +610,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                          ),
                        ],
                      ),
-                     SizedBox(height: 4),
-                     Text(
-                       invoiceDateController.text,
-                       style: theme.textTheme.bodyMedium?.copyWith(
-                         color: Colors.grey[600],
-                         fontSize: 13,
-                       ),
-                     ),
+                                           SizedBox(height: 4),
+                      Text(
+                        invoiceDateController.text,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                          fontSize: 13,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Consumer<InvoiceNumberingService>(
+                        builder: (context, invoiceNumberingService, child) {
+                          return Text(
+                            'Format: ${invoiceNumberingService.prefix}${invoiceNumberingService.separator}[Number]',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[500],
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          );
+                        },
+                      ),
                                            if (dueDateController.text.isNotEmpty && dueDateController.text != 'None')
                         Text(
                           'Due: ${dueDateController.text} (${_calculateDaysDifference()} day(s))',
@@ -3030,7 +3079,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       additionalChargesTotal: additionalChargesTotal,
                       roundoff: _calculateRoundoff(),
                       total: total,
-                      invoiceNumber: invoiceData?['id']?.toString() ?? 'INV-${DateTime.now().millisecondsSinceEpoch}',
+                      invoiceNumber: invoiceData?['id']?.toString() ?? Provider.of<InvoiceNumberingService>(context, listen: false).getNextInvoiceNumber(),
                       date: DateTime.now(),
                       customerName: customerNameController.text,
                       customerPhone: phoneController.text,

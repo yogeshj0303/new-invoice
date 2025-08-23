@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:invoice_app/screens/gst_settings_screen.dart';
-import 'package:invoice_app/screens/invoice_phone_settings_screen.dart';
+import 'package:invoice_app/screens/contact_information_screen.dart';
+import 'package:invoice_app/screens/terms_conditions_screen.dart';
+import 'package:invoice_app/screens/invoice_numbering_screen.dart';
+import 'package:invoice_app/screens/discount_settings_screen.dart';
+import 'package:invoice_app/screens/digital_signature_screen.dart';
+import 'package:invoice_app/services/discount_settings_service.dart';
+import 'package:invoice_app/services/digital_signature_service.dart';
 
 class InvoiceSettingsScreen extends StatelessWidget {
   const InvoiceSettingsScreen({super.key});
@@ -121,72 +128,72 @@ class InvoiceSettingsScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                // const SizedBox(height: 12),
 
                 // GST Features Section
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: borderColor, width: 1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.receipt_long,
-                          color: primaryColor,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const GSTSettingsScreen(),
-                              ),
-                            );
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'GST e-Invoice & e-Way Bill',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Generate compliant GST documents',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.grey[600],
-                        size: 14,
-                      ),
-                    ],
-                  ),
-                ),
+                // Container(
+                //   padding: const EdgeInsets.all(12),
+                //   decoration: BoxDecoration(
+                //     border: Border.all(color: borderColor, width: 1),
+                //     borderRadius: BorderRadius.circular(6),
+                //   ),
+                //   child: Row(
+                //     children: [
+                //       Container(
+                //         width: 36,
+                //         height: 36,
+                //         decoration: BoxDecoration(
+                //           color: primaryColor.withOpacity(0.1),
+                //           borderRadius: BorderRadius.circular(8),
+                //         ),
+                //         child: Icon(
+                //           Icons.receipt_long,
+                //           color: primaryColor,
+                //           size: 18,
+                //         ),
+                //       ),
+                //       const SizedBox(width: 12),
+                //       Expanded(
+                //         child: GestureDetector(
+                //           onTap: () {
+                //             Navigator.push(
+                //               context,
+                //               MaterialPageRoute(
+                //                 builder: (context) => const GSTSettingsScreen(),
+                //               ),
+                //             );
+                //           },
+                //           child: Column(
+                //             crossAxisAlignment: CrossAxisAlignment.start,
+                //             children: [
+                //               const Text(
+                //                 'GST e-Invoice & e-Way Bill',
+                //                 style: TextStyle(
+                //                   fontSize: 14,
+                //                   fontWeight: FontWeight.w600,
+                //                   color: Colors.black87,
+                //                 ),
+                //               ),
+                //               const SizedBox(height: 2),
+                //               Text(
+                //                 'Generate compliant GST documents',
+                //                 style: TextStyle(
+                //                   fontSize: 12,
+                //                   color: Colors.grey[600],
+                //                 ),
+                //               ),
+                //             ],
+                //           ),
+                //         ),
+                //       ),
+                //       Icon(
+                //         Icons.arrow_forward_ios,
+                //         color: Colors.grey[600],
+                //         size: 14,
+                //       ),
+                //     ],
+                //   ),
+                // ),
                 const SizedBox(height: 12),
 
                 // Settings Section
@@ -198,6 +205,14 @@ class InvoiceSettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildSettingItem(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const GSTSettingsScreen(),
+                            ),
+                          );
+                        },
                         icon: Icons.palette_outlined,
                         title: 'Theme & Colors',
                         description: 'Customize invoice appearance',
@@ -207,17 +222,25 @@ class InvoiceSettingsScreen extends StatelessWidget {
                         icon: Icons.format_list_numbered,
                         title: 'Invoice Numbering',
                         description: 'Set prefix and sequence',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const InvoiceNumberingScreen(),
+                            ),
+                          );
+                        },
                       ),
                       const Divider(height: 1, color: borderColor),
                                              _buildSettingItem(
                          icon: Icons.phone_outlined,
                          title: 'Contact Information',
-                         description: 'Phone & email display',
+                         description: 'Phone, email & business details',
                          onTap: () {
                            Navigator.push(
                              context,
                              MaterialPageRoute(
-                               builder: (context) => const InvoicePhoneSettingsScreen(),
+                               builder: (context) => const ContactInformationScreen(),
                              ),
                            );
                          },
@@ -227,12 +250,32 @@ class InvoiceSettingsScreen extends StatelessWidget {
                         icon: Icons.description_outlined,
                         title: 'Terms & Conditions',
                         description: 'Add custom terms',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TermsConditionsScreen(),
+                            ),
+                          );
+                        },
                       ),
                       const Divider(height: 1, color: borderColor),
-                      _buildSettingItem(
-                        icon: Icons.draw_outlined,
-                        title: 'Digital Signature',
-                        description: 'Add your signature',
+                      Consumer<DigitalSignatureService>(
+                        builder: (context, signatureService, child) {
+                          return _buildSettingItem(
+                            icon: Icons.draw_outlined,
+                            title: 'Digital Signature',
+                            description: signatureService.displayText,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const DigitalSignatureScreen(),
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                       const Divider(height: 1, color: borderColor),
                       _buildSettingItem(
@@ -241,10 +284,22 @@ class InvoiceSettingsScreen extends StatelessWidget {
                         description: 'Display account information',
                       ),
                       const Divider(height: 1, color: borderColor),
-                      _buildSettingItem(
-                        icon: Icons.percent_outlined,
-                        title: 'Discount Settings',
-                        description: 'Discount After Tax',
+                      Consumer<DiscountSettingsService>(
+                        builder: (context, discountService, child) {
+                          return _buildSettingItem(
+                            icon: Icons.percent_outlined,
+                            title: 'Discount Settings',
+                            description: discountService.displayText,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const DiscountSettingsScreen(),
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                     ],
                   ),
