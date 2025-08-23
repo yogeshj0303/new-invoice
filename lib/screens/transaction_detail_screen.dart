@@ -8,6 +8,13 @@ import '../services/theme_service.dart';
 import '../services/invoice_numbering_service.dart';
 import 'package:provider/provider.dart';
 import 'invoice_template_screen.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'dart:io';
 
 class TransactionDetailScreen extends StatefulWidget {
   final Transaction transaction;
@@ -121,6 +128,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: _showDeleteConfirmation,
+            icon: Icon(
+              Icons.delete,
+              color: Colors.red,
+              size: 20,
+            ),
+            tooltip: 'Delete Invoice',
+          ),
+        ],
         shape: Border(
           bottom: BorderSide(
             color: Colors.grey.withOpacity(0.1),
@@ -255,12 +273,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Implement download functionality
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Download functionality coming soon')),
-                  );
-                },
+                onPressed: _downloadInvoice,
                 icon: Icon(Icons.download, size: 18, color: selectedColor),
                 label: Text(
                   'Download',
@@ -275,33 +288,637 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implement share functionality
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Share functionality coming soon')),
-                  );
-                },
-                icon: const Icon(Icons.share, size: 18),
-                label: const Text(
-                  'Share',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(width: 10),
+                         Expanded(
+               child: ElevatedButton.icon(
+                 onPressed: _shareInvoice,
+                 icon: Icon(
+                   Icons.share,
+                   size: 18,
+                   color: Colors.white,
+                 ),
+                 label: Text(
+                   'Share',
+                   style: TextStyle(
+                     fontSize: 14,
+                     fontWeight: FontWeight.w600,
+                     color: Colors.white,
+                   ),
+                 ),
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: selectedColor,
+                   padding: const EdgeInsets.symmetric(vertical: 16),
+                   shape: RoundedRectangleBorder(
+                     borderRadius: BorderRadius.circular(12),
+                   ),
+                 ),
+               ),
+             ),
           ],
         ),
       ),
     );
+  }
+
+  void _showDeleteConfirmation() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Warning icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 32,
+                    color: Colors.red[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Title
+                const Text(
+                  'Delete Invoice',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                
+                // Description
+                const Text(
+                  'Choose how you want to delete this invoice:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                
+                // Delete options
+                Column(
+                  children: [
+                    // Temporary delete option
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _deleteInvoice();
+                        },
+                        icon: Icon(Icons.delete_outline, color: Colors.orange[600]),
+                        label: Text(
+                          'Temporarily Delete (Move to Trash)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange[600],
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: Colors.orange[300]!, width: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Permanent delete option
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showPermanentDeleteConfirmation();
+                        },
+                        icon: Icon(Icons.delete_forever, color: Colors.red[600]),
+                        label: Text(
+                          'Permanently Delete (Cannot Recover)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red[600],
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: Colors.red[300]!, width: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                // Cancel button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.grey[300]!),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPermanentDeleteConfirmation() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Warning icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.delete_forever,
+                    size: 32,
+                    color: Colors.red[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Title
+                const Text(
+                  'Permanently Delete Invoice',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                
+                // Description
+                const Text(
+                  'Are you absolutely sure you want to permanently delete this invoice? This action cannot be undone.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.red,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _deleteInvoice(isPermanent: true);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Delete Permanently',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteInvoice({bool isPermanent = false}) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final response = isPermanent 
+          ? await ApiService.permanentDeleteInvoice(widget.transaction.invoiceId)
+          : await ApiService.deleteInvoice(widget.transaction.invoiceId);
+      
+      if (response['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isPermanent ? 'Invoice permanently deleted' : 'Invoice temporarily deleted'),
+            backgroundColor: isPermanent ? Colors.red : Colors.green,
+          ),
+        );
+        
+        // Navigate back to previous screen with result to refresh transactions
+        Navigator.of(context).pop({'refresh': true, 'deletedInvoiceId': widget.transaction.invoiceId});
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Failed to delete invoice'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting invoice: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _downloadInvoice() async {
+    if (_detailedInvoice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invoice data not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Generate PDF
+      final pdf = await _generateInvoicePDF();
+      
+      // Get app documents directory
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'Invoice_${_getFormattedInvoiceNumber()}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory.path}/$fileName');
+      
+      // Write PDF to file
+      await file.writeAsBytes(pdf);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invoice downloaded to: ${file.path}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error downloading invoice: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+
+
+  Future<void> _shareInvoice() async {
+    if (_detailedInvoice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invoice data not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Generate PDF on-the-fly
+      final pdf = await _generateInvoicePDF();
+      
+      // Get temporary directory for sharing
+      final directory = await getTemporaryDirectory();
+      final fileName = 'Invoice_${_getFormattedInvoiceNumber()}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory.path}/$fileName');
+      
+      // Write PDF to temporary file
+      await file.writeAsBytes(pdf);
+      
+      // Share the file
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Invoice ${_getFormattedInvoiceNumber()}',
+        subject: 'Invoice from ${widget.businessProfile?.businessName ?? 'Business'}',
+      );
+      
+      // Clean up the temporary file
+      await file.delete();
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sharing invoice: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<Uint8List> _generateInvoicePDF() async {
+    final pdf = pw.Document();
+    
+    // Add invoice content
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'INVOICE',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    'Invoice #: ${_getFormattedInvoiceNumber()}',
+                    style: pw.TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              
+              // Business Info
+              if (widget.businessProfile != null) ...[
+                pw.Text(
+                  widget.businessProfile!.businessName,
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(widget.businessProfile!.businessAddress),
+                pw.Text('Phone: ${widget.businessProfile!.phoneNoFirst}'),
+                pw.SizedBox(height: 20),
+              ],
+              
+              // Customer Info
+              pw.Text(
+                'Bill To:',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.Text('Name: ${_detailedInvoice!.customerName}'),
+              pw.Text('Phone: ${_detailedInvoice!.customerNumber}'),
+              pw.SizedBox(height: 20),
+              
+              // Date
+              pw.Text(
+                'Date: ${DateTime.parse(_detailedInvoice!.createdAt).toString().split(' ')[0]}',
+                style: pw.TextStyle(fontSize: 14),
+              ),
+              pw.SizedBox(height: 20),
+              
+              // Items Table
+              pw.Table(
+                border: pw.TableBorder.all(),
+                children: [
+                  // Header row
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Qty', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Price', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  // Item rows
+                  ..._detailedInvoice!.items.map((item) => pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(item.item.itemName),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(item.quantity.toString()),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('₹${item.price}'),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('₹${(item.quantity * double.parse(item.price)).toStringAsFixed(2)}'),
+                      ),
+                    ],
+                  )),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              
+              // Additional Charges
+              if (_detailedInvoice!.charges.isNotEmpty) ...[
+                pw.Text(
+                  'Additional Charges:',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+                ..._detailedInvoice!.charges.map((charge) => pw.Text(
+                  '${charge.chargeName}: ₹${charge.price}',
+                )),
+                pw.SizedBox(height: 10),
+              ],
+              
+              // Totals
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('Subtotal: ₹${_calculateSubtotal().toStringAsFixed(2)}'),
+                      pw.Text('Discount: ₹${_detailedInvoice!.discountAmount}'),
+                      pw.Text('Round Off: ₹${_detailedInvoice!.roundOff}'),
+                      pw.Text(
+                        'Total: ₹${(_calculateSubtotal() + _calculateChargesTotal()).toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              // Payment Info
+              pw.SizedBox(height: 20),
+              pw.Text('Payment Type: ${_detailedInvoice!.paymentType.isNotEmpty ? _detailedInvoice!.paymentType : 'Cash'}'),
+              pw.Text('Amount Received: ₹${_detailedInvoice!.amountReceived}'),
+              
+              // Notes
+              if (_detailedInvoice!.note.isNotEmpty) ...[
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  'Notes:',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(_detailedInvoice!.note),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+    
+    return pdf.save();
   }
 
   double _calculateSubtotal() {

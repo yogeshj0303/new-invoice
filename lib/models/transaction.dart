@@ -103,6 +103,7 @@ class Invoice {
   final String note;
   final String createdAt;
   final String updatedAt;
+  final String recycleStatus;
 
   Invoice({
     required this.id,
@@ -119,6 +120,7 @@ class Invoice {
     required this.note,
     required this.createdAt,
     required this.updatedAt,
+    required this.recycleStatus,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
@@ -137,6 +139,7 @@ class Invoice {
       note: json['note'] ?? '',
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
+      recycleStatus: json['recycle_status'] ?? 'none',
     );
   }
 
@@ -156,6 +159,7 @@ class Invoice {
       'note': note,
       'created_at': createdAt,
       'updated_at': updatedAt,
+      'recycle_status': recycleStatus,
     };
   }
 
@@ -174,6 +178,7 @@ class Invoice {
     String? note,
     String? createdAt,
     String? updatedAt,
+    String? recycleStatus,
   }) {
     return Invoice(
       id: id ?? this.id,
@@ -190,6 +195,7 @@ class Invoice {
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      recycleStatus: recycleStatus ?? this.recycleStatus,
     );
   }
 

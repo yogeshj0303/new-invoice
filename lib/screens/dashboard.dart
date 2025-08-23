@@ -1844,9 +1844,12 @@ class _TransactionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if transaction is accessible based on recycle status
+    final bool isAccessible = transaction.invoice.recycleStatus != 'temporary_destroy';
+    
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: isAccessible ? () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => TransactionDetailScreen(
@@ -1855,20 +1858,27 @@ class _TransactionItem extends StatelessWidget {
             ),
           ),
         );
-      },
+        
+        // Check if we need to refresh transactions (e.g., after deletion)
+        if (result != null && result['refresh'] == true) {
+          onRefresh();
+        }
+      } : null, // Disable tap if not accessible
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isAccessible ? Colors.white : Colors.grey[100], // Different color for inaccessible transactions
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
-          boxShadow: [
+          border: Border.all(
+            color: isAccessible ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+          ),
+          boxShadow: isAccessible ? [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
-          ],
+          ] : null, // No shadow for inaccessible transactions
         ),
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1883,10 +1893,28 @@ class _TransactionItem extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: isAccessible ? Colors.black87 : Colors.grey[600], // Different text color for inaccessible
                   ),
                 ),
               ),
+              // Show recycle status indicator for temporary_destroy
+              if (!isAccessible)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red[100],
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.red[300]!),
+                  ),
+                  child: Text(
+                    'ARCHIVED',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                ),
             ],
           ),
           SizedBox(height: 4),
@@ -1899,12 +1927,18 @@ class _TransactionItem extends StatelessWidget {
                   children: [
                     Text(
                       'Invoice #${transaction.invoice.id}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: isAccessible ? Colors.grey[600] : Colors.grey[500]
+                      ),
                     ),
                     SizedBox(height: 8),
                     Text(
                       _formatDate(transaction.date),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: isAccessible ? Colors.grey[600] : Colors.grey[500]
+                      ),
                     ),
                   ],
                 ),
@@ -1917,11 +1951,13 @@ class _TransactionItem extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: Colors.black87,
+                      color: isAccessible ? Colors.black87 : Colors.grey[600],
                     ),
                   ),
                   SizedBox(height: 4),
-                                     PopupMenuButton<String>(
+                  // Only show status popup for accessible transactions
+                  if (isAccessible)
+                    PopupMenuButton<String>(
                      onSelected: (String newStatus) async {
                        // Update the transaction status directly
                        final updatedTransaction = await ApiService.updateTransactionStatus(
@@ -2022,7 +2058,27 @@ class _TransactionItem extends StatelessWidget {
                          ],
                        ),
                      ),
-                   ),
+                   )
+                  else
+                    // Show status without popup for inaccessible transactions
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(transaction.status).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: _getStatusColor(transaction.status).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        transaction.status.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: _getStatusColor(transaction.status),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ],

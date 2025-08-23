@@ -498,9 +498,12 @@ class _TransactionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if transaction is accessible based on recycle status
+    final bool isAccessible = transaction.invoice.recycleStatus != 'temporary_destroy';
+    
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: isAccessible ? () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => TransactionDetailScreen(
@@ -509,20 +512,27 @@ class _TransactionItem extends StatelessWidget {
             ),
           ),
         );
-      },
+        
+        // Check if we need to refresh transactions (e.g., after deletion)
+        if (result != null && result['refresh'] == true) {
+          onRefresh();
+        }
+      } : null, // Disable tap if not accessible
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isAccessible ? Colors.white : Colors.grey[100], // Different color for inaccessible transactions
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
-          boxShadow: [
+          border: Border.all(
+            color: isAccessible ? Colors.grey.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+          ),
+          boxShadow: isAccessible ? [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
-          ],
+          ] : null, // No shadow for inaccessible transactions
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,11 +547,28 @@ class _TransactionItem extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: Colors.black87,
+                      color: isAccessible ? Colors.black87 : Colors.grey[600], // Different text color for inaccessible
                     ),
                   ),
                 ),
-                
+                // Show recycle status indicator for temporary_destroy
+                if (!isAccessible)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red[100],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.red[300]!),
+                    ),
+                    child: Text(
+                      'ARCHIVED',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                  ),
               ],
             ),
             SizedBox(height: 8),
@@ -555,12 +582,18 @@ class _TransactionItem extends StatelessWidget {
                     children: [
                       Text(
                         'Invoice #${transaction.invoice.id}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: isAccessible ? Colors.grey[600] : Colors.grey[500]
+                        ),
                       ),
                       SizedBox(height: 4),
                       Text(
                         _formatDate(transaction.date),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: isAccessible ? Colors.grey[600] : Colors.grey[500]
+                        ),
                       ),
                     ],
                   ),
@@ -573,81 +606,115 @@ class _TransactionItem extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                        color: Colors.black87,
+                        color: isAccessible ? Colors.black87 : Colors.grey[600],
                       ),
                     ),
                     SizedBox(height: 4),
-                    PopupMenuButton<String>(
-                      onSelected: (String newStatus) async {
-                        final updatedTransaction = await ApiService.updateTransactionStatus(
-                          transaction.id,
-                          newStatus.toLowerCase(),
-                        );
-                        if (updatedTransaction['success'] == true) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Status updated to ${newStatus.toUpperCase()}')),
+                    // Only show status popup for accessible transactions
+                    if (isAccessible)
+                      PopupMenuButton<String>(
+                        onSelected: (String newStatus) async {
+                          final updatedTransaction = await ApiService.updateTransactionStatus(
+                            transaction.id,
+                            newStatus.toLowerCase(),
                           );
-                          onRefresh();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to update status: ${updatedTransaction['message'] ?? 'Unknown error'}')),
-                          );
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem<String>(
-                          value: 'paid',
+                          if (updatedTransaction['success'] == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Status updated to ${newStatus.toUpperCase()}')),
+                            );
+                            onRefresh();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to update status: ${updatedTransaction['message'] ?? 'Unknown error'}')),
+                            );
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => [
+                          PopupMenuItem<String>(
+                            value: 'paid',
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[700],
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Paid'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'unpaid',
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[700],
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Unpaid'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'overdue',
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[700],
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('Overdue'),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(transaction.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: _getStatusColor(transaction.status).withOpacity(0.3),
+                            ),
+                          ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.green[700],
-                                  shape: BoxShape.circle,
+                              Text(
+                                transaction.status.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: _getStatusColor(transaction.status),
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Text('Paid'),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                size: 12,
+                                color: _getStatusColor(transaction.status),
+                              ),
                             ],
                           ),
                         ),
-                        PopupMenuItem<String>(
-                          value: 'unpaid',
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.red[700],
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Text('Unpaid'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'overdue',
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[700],
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Text('Overdue'),
-                            ],
-                          ),
-                        ),
-                      ],
-                      child: Container(
+                      )
+                    else
+                      // Show status without popup for inaccessible transactions
+                      Container(
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: _getStatusColor(transaction.status).withOpacity(0.1),
@@ -656,27 +723,15 @@ class _TransactionItem extends StatelessWidget {
                             color: _getStatusColor(transaction.status).withOpacity(0.3),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              transaction.status.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: _getStatusColor(transaction.status),
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_drop_down,
-                              size: 12,
-                              color: _getStatusColor(transaction.status),
-                            ),
-                          ],
+                        child: Text(
+                          transaction.status.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: _getStatusColor(transaction.status),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],

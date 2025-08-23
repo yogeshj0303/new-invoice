@@ -2295,4 +2295,157 @@ class ApiService {
       };
     }
   }
+
+  // Delete Invoice API
+  static Future<Map<String, dynamic>> deleteInvoice(int invoiceId) async {
+    try {
+      print('🔍 [DEBUG] Delete Invoice Request:');
+      final url = '${ApiConstants.baseURL}/api/invoices/action?action=temporary_destroy&id=$invoiceId';
+      print('   URL: $url');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Delete Invoice Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Invoice temporarily deleted',
+        };
+      } else {
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        String errorMessage = 'Failed to delete invoice';
+        
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        }
+        
+        return {
+          'success': false,
+          'message': errorMessage,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred while deleting invoice: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Recover Invoice API
+  static Future<Map<String, dynamic>> recoverInvoice(int invoiceId) async {
+    try {
+      print('🔍 [DEBUG] Recover Invoice Request:');
+      final url = '${ApiConstants.baseURL}/api/invoices/action?action=restore&id=$invoiceId';
+      print('   URL: $url');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Recover Invoice Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Invoice restored successfully',
+        };
+      } else {
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        String errorMessage = 'Failed to restore invoice';
+        
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        }
+        
+        return {
+          'success': false,
+          'message': errorMessage,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred while recovering invoice: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Permanent Delete Invoice API
+  static Future<Map<String, dynamic>> permanentDeleteInvoice(int invoiceId) async {
+    try {
+      print('🔍 [DEBUG] Permanent Delete Invoice Request:');
+      final url = '${ApiConstants.baseURL}/api/invoices/action?action=permanent_destroy&id=$invoiceId';
+      print('   URL: $url');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: ApiConstants.defaultHeaders,
+      );
+
+      print('📡 [DEBUG] Permanent Delete Invoice Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Invoice permanently deleted',
+        };
+      } else {
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        String errorMessage = 'Failed to permanently delete invoice';
+        
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        }
+        
+        return {
+          'success': false,
+          'message': errorMessage,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred while permanently deleting invoice: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
 }

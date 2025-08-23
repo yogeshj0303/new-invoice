@@ -5,9 +5,11 @@ import '../models/user.dart';
 import '../models/business_profile.dart';
 import '../utils/auth_utils.dart';
 import '../services/api_service.dart';
+import '../screens/recover_deleted_invoices_screen.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
+  
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -954,7 +956,16 @@ class _MenuScreenState extends State<MenuScreen> {
               _buildSettingsListTile(
                 'Recover Deleted Invoices',
                 Icons.delete_outline,
-                () {},
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RecoverDeletedInvoicesScreen(
+                        businessProfile: _businessProfile,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
