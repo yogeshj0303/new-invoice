@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'calculator_screen.dart';
 import '../services/api_service.dart';
 import '../models/transaction.dart';
@@ -20,6 +21,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
   // Theme colors
   static const Color primaryColor = Color(0xFF2E3085);
   static const Color secondaryColor = Color(0xFF4E4AA8);
+  
+  // Support contact configuration
+  // TODO: Update these values with your actual support contact information
+  static const String supportPhoneNumber = '+919876543210';
+  static const String supportPhoneDisplay = '+91 98765 43210';
+  static const String supportWhatsAppMessage = 'Hi, I need help with my invoice app. Can you assist me?';
+  static const String supportEmail = 'support@invoiceapp.com';
+  static const String supportEmailSubject = 'Invoice App Support Request';
+  static const String supportEmailBody = 'Hi, I need help with my invoice app. Please assist me.';
   
   // Transaction data
   List<Transaction> _transactions = [];
@@ -424,33 +434,32 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   Spacer(),
                   Row(
                     children: [
-                      Icon(
-                        Icons.calendar_today,
-                        color: Colors.grey[600],
-                        size: 16,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'LAST 365 DAYS',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(width: 16),
                       GestureDetector(
-                        onTap: _loadTransactions,
+                        onTap: () => Navigator.pushNamed(context, '/transactions'),
                         child: Container(
-                          padding: EdgeInsets.all(8),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.refresh,
                             color: primaryColor,
-                            size: 16,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'View All',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -626,14 +635,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
       );
     }
 
+    // Sort transactions by date (latest first) and take the first 5
+    final sortedTransactions = List<Transaction>.from(_transactions)
+      ..sort((a, b) {
+        try {
+          final dateA = DateTime.tryParse(a.date) ?? DateTime(1900);
+          final dateB = DateTime.tryParse(b.date) ?? DateTime(1900);
+          return dateB.compareTo(dateA); // Latest first
+        } catch (e) {
+          return 0;
+        }
+      });
+
     return Column(
-      children: _transactions.take(5).map((transaction) {
+      children: sortedTransactions.take(5).map((transaction) {
         return Column(
           children: [
             _TransactionItem(
               transaction: transaction,
               isTablet: isTablet,
               businessProfile: _businessProfile,
+              onRefresh: _loadTransactions,
             ),
             SizedBox(height: 8),
           ],
@@ -654,6 +676,143 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onRefresh: _loadBusinessProfile,
       ),
     );
+  }
+
+  void _showStatusChangeDialog(BuildContext context, Transaction transaction) {
+    final List<String> statusOptions = ['Paid', 'Unpaid', 'Overdue'];
+    String selectedStatus = transaction.status.toUpperCase();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Change Status for Invoice #${transaction.invoice.id}'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: statusOptions.map((status) {
+                    return RadioListTile(
+                      title: Text(status),
+                      value: status,
+                      groupValue: selectedStatus,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedStatus = value.toString();
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final updatedTransaction = await ApiService.updateTransactionStatus(
+                      transaction.id,
+                      selectedStatus.toLowerCase(),
+                    );
+                    if (updatedTransaction['success'] == true) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Status updated to $selectedStatus')),
+                      );
+                      _loadTransactions(); // Refresh the list
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to update status: ${updatedTransaction[ApiConstants.messageKey] ?? 'Unknown error'}')),
+                      );
+                    }
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Helper method to make phone call
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        throw 'Could not launch phone call';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not make phone call: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Helper method to open WhatsApp
+  Future<void> _openWhatsApp(String phoneNumber, String message) async {
+    // Remove any non-digit characters from phone number
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+    
+    // Format for WhatsApp (add country code if not present)
+    String whatsappPhone = cleanPhone;
+    if (!whatsappPhone.startsWith('91') && !whatsappPhone.startsWith('+91')) {
+      whatsappPhone = '91$whatsappPhone'; // Add India country code
+    }
+    
+    final Uri whatsappUri = Uri.parse(
+      'https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message)}'
+    );
+    
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch WhatsApp';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open WhatsApp: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Helper method to send email
+  Future<void> _sendEmail(String email, String subject, String body) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+      queryParameters: {
+        'subject': subject,
+        'body': body,
+      },
+    );
+    
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        throw 'Could not launch email app';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not send email: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showContactUsDialog(BuildContext context) {
@@ -722,32 +881,39 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                 ),
                 SizedBox(height: 20),
-                // Speak With Expert option
-                _ContactOption(
-                  icon: Icons.phone,
-                  title: 'Speak With Expert',
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    // TODO: Implement phone call functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Calling expert...')),
-                    );
-                  },
-                ),
-                SizedBox(height: 12),
-                // Chat With Expert option
-                _ContactOption(
-                  icon: Icons.chat,
-                  title: 'Chat With Expert',
-                  isWhatsApp: true,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    // TODO: Implement WhatsApp chat functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Opening WhatsApp chat...')),
-                    );
-                  },
-                ),
+                                 // Speak With Expert option
+                 _ContactOption(
+                   icon: Icons.phone,
+                   title: 'Speak With Expert',
+                   subtitle: supportPhoneDisplay,
+                   onTap: () {
+                     Navigator.of(context).pop();
+                     _makePhoneCall(supportPhoneNumber);
+                   },
+                 ),
+                 SizedBox(height: 12),
+                 // Chat With Expert option
+                 _ContactOption(
+                   icon: Icons.chat,
+                   title: 'Chat With Expert',
+                   subtitle: supportPhoneDisplay,
+                   isWhatsApp: true,
+                   onTap: () {
+                     Navigator.of(context).pop();
+                     _openWhatsApp(supportPhoneNumber, supportWhatsAppMessage);
+                   },
+                 ),
+                 SizedBox(height: 12),
+                 // Email Support option
+                 _ContactOption(
+                   icon: Icons.email,
+                   title: 'Email Support',
+                   subtitle: supportEmail,
+                   onTap: () {
+                     Navigator.of(context).pop();
+                     _sendEmail(supportEmail, supportEmailSubject, supportEmailBody);
+                   },
+                 ),
               ],
             ),
           ),
@@ -755,6 +921,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       },
     );
   }
+
 
 
 }
@@ -1375,12 +1542,14 @@ class _BusinessBottomSheet extends StatelessWidget {
 class _ContactOption extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
   final VoidCallback onTap;
   final bool isWhatsApp;
 
   const _ContactOption({
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.onTap,
     this.isWhatsApp = false,
   });
@@ -1408,14 +1577,29 @@ class _ContactOption extends StatelessWidget {
                       : Icon(icon, color: Colors.black87, size: 20),
             ),
             SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
+                         Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 Text(
+                   title,
+                   style: TextStyle(
+                     fontSize: 14,
+                     fontWeight: FontWeight.w500,
+                     color: Colors.black87,
+                   ),
+                 ),
+                 if (subtitle != null) ...[
+                   SizedBox(height: 2),
+                   Text(
+                     subtitle!,
+                     style: TextStyle(
+                       fontSize: 12,
+                       color: Colors.grey[600],
+                     ),
+                   ),
+                 ],
+               ],
+             ),
           ],
         ),
       ),
@@ -1608,11 +1792,13 @@ class _TransactionItem extends StatelessWidget {
   final Transaction transaction;
   final bool isTablet;
   final BusinessProfile? businessProfile;
+  final VoidCallback onRefresh;
 
   const _TransactionItem({
     required this.transaction,
     required this.isTablet,
     this.businessProfile,
+    required this.onRefresh,
   });
 
   Color _getStatusColor(String status) {
@@ -1735,96 +1921,114 @@ class _TransactionItem extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 4),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(transaction.status).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      transaction.status.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: _getStatusColor(transaction.status),
-                      ),
-                    ),
-                  ),
+                                     PopupMenuButton<String>(
+                     onSelected: (String newStatus) async {
+                       // Update the transaction status directly
+                       final updatedTransaction = await ApiService.updateTransactionStatus(
+                         transaction.id,
+                         newStatus.toLowerCase(),
+                       );
+                       if (updatedTransaction['success'] == true) {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           SnackBar(content: Text('Status updated to ${newStatus.toUpperCase()}')),
+                         );
+                         // Refresh the transactions list
+                         onRefresh();
+                       } else {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           SnackBar(content: Text('Failed to update status: ${updatedTransaction['message'] ?? 'Unknown error'}')),
+                         );
+                       }
+                     },
+                     itemBuilder: (BuildContext context) => [
+                       PopupMenuItem<String>(
+                         value: 'paid',
+                         child: Row(
+                           children: [
+                             Container(
+                               width: 8,
+                               height: 8,
+                               decoration: BoxDecoration(
+                                 color: Colors.green[700],
+                                 shape: BoxShape.circle,
+                               ),
+                             ),
+                             SizedBox(width: 8),
+                             Text('Paid'),
+                           ],
+                         ),
+                       ),
+                       PopupMenuItem<String>(
+                         value: 'unpaid',
+                         child: Row(
+                           children: [
+                             Container(
+                               width: 8,
+                               height: 8,
+                               decoration: BoxDecoration(
+                                 color: Colors.red[700],
+                                 shape: BoxShape.circle,
+                               ),
+                             ),
+                             SizedBox(width: 8),
+                             Text('Unpaid'),
+                           ],
+                         ),
+                       ),
+                       PopupMenuItem<String>(
+                         value: 'overdue',
+                         child: Row(
+                           children: [
+                             Container(
+                               width: 8,
+                               height: 8,
+                               decoration: BoxDecoration(
+                                 color: Colors.orange[700],
+                                 shape: BoxShape.circle,
+                               ),
+                             ),
+                             SizedBox(width: 8),
+                             Text('Overdue'),
+                           ],
+                         ),
+                       ),
+                     ],
+                     child: Container(
+                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                       decoration: BoxDecoration(
+                         color: _getStatusColor(transaction.status).withOpacity(0.1),
+                         borderRadius: BorderRadius.circular(4),
+                         border: Border.all(
+                           color: _getStatusColor(transaction.status).withOpacity(0.3),
+                         ),
+                       ),
+                       child: Row(
+                         mainAxisSize: MainAxisSize.min,
+                         children: [
+                           Text(
+                             transaction.status.toUpperCase(),
+                             style: TextStyle(
+                               fontSize: 10,
+                               fontWeight: FontWeight.w500,
+                               color: _getStatusColor(transaction.status),
+                             ),
+                           ),
+                           SizedBox(width: 4),
+                           Icon(
+                             Icons.arrow_drop_down,
+                             size: 12,
+                             color: _getStatusColor(transaction.status),
+                           ),
+                         ],
+                       ),
+                     ),
+                   ),
                 ],
               ),
             ],
           ),
-          // Action buttons - only show if transaction is not paid
-          if (transaction.status.toLowerCase() != 'paid') ...[
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      // Handle Record Manually action
-                    },
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.currency_rupee,
-                            size: 14,
-                            color: Colors.grey[700],
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Record Manually',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      // Handle Share Payment Link action
-                    },
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.green[50],
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.message, size: 14, color: Colors.green[600]),
-                          SizedBox(width: 4),
-                          Text(
-                            'Share Payment Link',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.green[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          
+          
         ],
       ),
       ),

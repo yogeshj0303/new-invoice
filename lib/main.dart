@@ -32,6 +32,7 @@ import 'package:invoice_app/screens/manage_companies_screen.dart';
 import 'package:invoice_app/screens/add_item_screen.dart';
 import 'package:invoice_app/screens/create_item_screen.dart';
 import 'package:invoice_app/screens/business_gst_settings_screen.dart';
+import 'package:invoice_app/screens/transactions_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -290,6 +291,7 @@ class _RestaurantInvoiceAppState extends State<RestaurantInvoiceApp> {
         '/manage-companies': (context) => const ManageCompaniesScreen(),
         '/add-item': (context) => const AddItemScreen(),
         '/create-item': (context) => const CreateItemScreen(),
+        '/transactions': (context) => const TransactionsScreen(),
       },
       debugShowCheckedModeBanner: false,
       ),

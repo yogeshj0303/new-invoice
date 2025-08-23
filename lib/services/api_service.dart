@@ -2109,4 +2109,74 @@ class ApiService {
       };
     }
   }
+
+  // Update Transaction Status API
+  static Future<Map<String, dynamic>> updateTransactionStatus(int transactionId, String status) async {
+    try {
+      print('🔍 [DEBUG] Update Transaction Status Request:');
+      final url = '${ApiConstants.baseURL}${ApiConstants.updateTransactionStatus}';
+      print('   URL: $url');
+      print('   Transaction ID: $transactionId');
+      print('   Status: $status');
+      
+      final queryParams = {
+        'id': transactionId.toString(),
+        'status': status,
+      };
+      
+      final uri = Uri.parse(url).replace(queryParameters: queryParams);
+      print('   Final URI: $uri');
+      
+      final response = await http.get(uri);
+
+      print('📡 [DEBUG] Update Transaction Status Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ [DEBUG] Success Response Data: $data');
+        
+        if (data['message'] == 'Transaction status updated' && data['data'] != null) {
+          return {
+            'success': true,
+            ApiConstants.messageKey: 'Transaction status updated successfully',
+            'data': data['data'],
+          };
+        } else {
+          return {
+            'success': false,
+            ApiConstants.messageKey: data['message'] ?? 'Failed to update transaction status',
+            'data': null,
+          };
+        }
+      } else {
+        print('❌ [DEBUG] Error Status Code: ${response.statusCode}');
+        final errorData = jsonDecode(response.body);
+        String errorMessage = 'Failed to update transaction status';
+        
+        if (errorData.containsKey('message')) {
+          errorMessage = errorData['message'];
+        } else if (errorData.containsKey('error')) {
+          errorMessage = errorData['error'];
+        }
+        
+        return {
+          'success': false,
+          ApiConstants.messageKey: errorMessage,
+          'data': null,
+        };
+      }
+    } catch (e) {
+      print('💥 [DEBUG] Exception occurred while updating transaction status: $e');
+      print('💥 [DEBUG] Exception type: ${e.runtimeType}');
+      print('📡 [DEBUG] Stack trace: ${StackTrace.current}');
+      
+      return {
+        'success': false,
+        ApiConstants.messageKey: 'Network error: ${e.toString()}',
+        'data': null,
+      };
+    }
+  }
 }
